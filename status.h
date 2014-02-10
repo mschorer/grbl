@@ -1,8 +1,8 @@
 /*
-  coolant_control.c - coolant control methods
+  status.h - Header for status level commands and real-time processes
   Part of Grbl
 
-  Copyright (c) 2012-2014 Sungeun K. Jeon
+  Copyright (c) 2014 Sungeun K. Jeon  
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,34 +18,25 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "system.h"
-#include "coolant_control.h"
-#include "planner.h"
-#include "i2c_master.h"
+#ifndef status_h
+#define status_h
 
-void coolant_init()
-{
-  coolant_stop();
-}
+// Define system header files and standard libraries used by Grbl
+#include <inttypes.h>    
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 
+// Define Grbl configuration and shared header files
+#include "config.h"
+#include "cpu_map.h"
+#include "gcode.h"
 
-void coolant_stop()
-{
-	/*
-    TWI_buffer_out[0] = COOLANT_DISABLE;
-    TWI_master_start_write( 0x5e, 1);
-    */
-}
+// Initialize the serial protocol
+void status_init();
 
+// Executes an internal status command, defined as a string starting with a '$'
+void status_set( uint8_t status);
 
-void coolant_run(uint8_t mode)
-{
-  plan_synchronize(); // Ensure coolant turns on when specified in program.
-
-  /*
-  // COOLANT_FLOOD_ENABLE = 1
-  // COOLANT_MIST_ENABLE = 2
-  TWI_buffer_out[0] = mode;
-  TWI_master_start_write( 0x5e, 1);
-  */
-}
+#endif

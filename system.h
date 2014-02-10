@@ -40,7 +40,6 @@
 #include "cpu_map.h"
 #include "nuts_bolts.h"
 
-
 // Define system executor bit map. Used internally by runtime protocol as runtime command flags, 
 // which notifies the main program to execute the specified runtime command asynchronously.
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default

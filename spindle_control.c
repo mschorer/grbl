@@ -22,39 +22,18 @@
 #include "system.h"
 #include "spindle_control.h"
 #include "planner.h"
-
+#include "i2c_master.h"
 
 void spindle_init()
-{  
-  SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT);
-  
-  // On the Uno, spindle enable and PWM are shared. Other CPUs have seperate enable pin.
-  #ifdef VARIABLE_SPINDLE
-    SPINDLE_PWM_DDR |= (1<<SPINDLE_PWM_BIT);
-    #ifndef CPU_MAP_ATMEGA328P 
-      SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
-    #endif     
-  #else
-    SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
-  #endif
-  
+{
   spindle_stop();
 }
 
-
 void spindle_stop()
 {
-  // On the Uno, spindle enable and PWM are shared. Other CPUs have seperate enable pin.
-  #ifdef VARIABLE_SPINDLE
-    TCCRA_REGISTER &= ~(1<<COMB_BIT); // Disable PWM. Output voltage is zero.
-    #ifndef CPU_MAP_ATMEGA328P 
-      SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT);
-    #endif
-  #else
-    SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT);
-  #endif  
+    TWI_buffer_out[0] = 0;
+    TWI_master_start_write( 0x5c, 1);
 }
-
 
 void spindle_run(uint8_t direction, float rpm) 
 {
@@ -67,28 +46,16 @@ void spindle_run(uint8_t direction, float rpm)
     spindle_stop();
   
   } else {
-  
-    if (direction == SPINDLE_ENABLE_CW) {
-      SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
-    } else {
-      SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
+/*
+    switch (direction) {
+    case SPINDLE_ENABLE_CW:
+    case SPINDLE_ENABLE_CCW:
+    default:
     }
+*/
+    uint8_t rpm_100 = floor( rpm / 100);
 
-    #ifdef VARIABLE_SPINDLE
-      #define SPINDLE_RPM_RANGE (SPINDLE_MAX_RPM-SPINDLE_MIN_RPM)
-      TCCRA_REGISTER = (1<<COMB_BIT) | (1<<WAVE1_REGISTER) | (1<<WAVE0_REGISTER);
-      TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x02; // set to 1/8 Prescaler
-      rpm -= SPINDLE_MIN_RPM;
-      if ( rpm > SPINDLE_RPM_RANGE ) { rpm = SPINDLE_RPM_RANGE; } // Prevent uint8 overflow
-      uint8_t current_pwm = floor( rpm*(255.0/SPINDLE_RPM_RANGE) + 0.5);
-      OCR_REGISTER = current_pwm;
-      
-      #ifndef CPU_MAP_ATMEGA328P // On the Uno, spindle enable and PWM are shared.
-        SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
-      #endif
-    #else   
-      SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
-    #endif
-
+    TWI_buffer_out[0] = rpm_100;
+    TWI_master_start_write( 0x5c, 1);
   }
 }

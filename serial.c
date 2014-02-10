@@ -96,8 +96,7 @@ void serial_write(uint8_t data) {
 
 
 // Data Register Empty Interrupt handler
-ISR(SERIAL_UDRE)
-{
+ISR(SERIAL_UDRE) {
   uint8_t tail = tx_buffer_tail; // Temporary tx_buffer_tail (to optimize for volatile)
   
   #ifdef ENABLE_XONXOFF
@@ -149,8 +148,7 @@ uint8_t serial_read()
 }
 
 
-ISR(SERIAL_RX)
-{
+ISR(SERIAL_RX) {
   uint8_t data = UDR0;
   uint8_t next_head;
   

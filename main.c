@@ -31,6 +31,7 @@
 #include "motion_control.h"
 #include "limits.h"
 #include "report.h"
+#include "i2c_master.h"
 
 
 // Declare system global variable structure
@@ -44,6 +45,10 @@ int main(void)
   settings_init(); // Load grbl settings from EEPROM
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
+  status_init();
+
+  TWI_init();
+
   sei();
   
   memset(&sys, 0, sizeof(sys));  // Clear all system variables

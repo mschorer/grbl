@@ -87,6 +87,11 @@
   #define SPINDLE_DIRECTION_PORT  PORTB
   #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
 
+  // status display LED
+  #define STATUS_LED_DDR   DDRB
+  #define STATUS_LED_PORT  PORTB
+  #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+
   // Define flood and mist coolant enable output pins.
   // NOTE: Uno analog pins 4 and 5 are reserved for an i2c interface, and may be installed at
   // a later date if flash and memory space allows.

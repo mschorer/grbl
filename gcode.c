@@ -23,6 +23,7 @@
    by Kramer, Proctor and Messina. */
 
 #include "system.h"
+#include "status.h"
 #include "settings.h"
 #include "gcode.h"
 #include "planner.h"
@@ -76,6 +77,11 @@ void gc_sync_position(int32_t x, int32_t y, int32_t z)
 static float to_millimeters(float value) 
 {
   return(gc.inches_mode ? (value * MM_PER_INCH) : value);
+}
+
+void gc_set_pgm_state( uint8_t s) {
+	gc.program_flow = s;
+	status_set( s);
 }
 
          
@@ -180,9 +186,9 @@ uint8_t gc_execute_line(char *line)
         }        
         // Set 'M' commands
         switch(int_value) {
-          case 0: gc.program_flow = PROGRAM_FLOW_PAUSED; break; // Program pause
+          case 0: gc_set_pgm_state( PROGRAM_FLOW_PAUSED); break; // Program pause
           case 1: break; // Optional stop not supported. Ignore.
-          case 2: case 30: gc.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset 
+          case 2: case 30: gc_set_pgm_state( PROGRAM_FLOW_COMPLETED); break; // Program end and reset
           case 3: gc.spindle_direction = SPINDLE_ENABLE_CW; break;
           case 4: gc.spindle_direction = SPINDLE_ENABLE_CCW; break;
           case 5: gc.spindle_direction = SPINDLE_DISABLE; break;
@@ -465,7 +471,7 @@ uint8_t gc_execute_line(char *line)
     // If complete, reset to reload defaults (G92.2,G54,G17,G90,G94,M48,G40,M5,M9). Otherwise,
     // re-enable program flow after pause complete, where cycle start will resume the program.
     if (gc.program_flow == PROGRAM_FLOW_COMPLETED) { mc_reset(); }
-    else { gc.program_flow = PROGRAM_FLOW_RUNNING; }
+    else { gc_set_pgm_state( PROGRAM_FLOW_RUNNING); }
   }    
   
   return(gc.status_code);
