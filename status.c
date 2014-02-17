@@ -34,22 +34,18 @@ void status_init()
 	STATUS_LED_DDR |= (1<<STATUS_LED_BIT);
 	//STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
 
-	TCCR2B = 0x00;        //Disable Timer2 while we set it up
+	TCCR2B = 0x00;			//Disable Timer2 while we set it up
 
 	TCNT2	= 1;
-	TIFR2   = 0x00;        //Timer2 INT Flag Reg: Clear Timer Overflow Flag
-	TIMSK2  = 0x01;	//TOIE2;        //Timer2 INT Reg: Timer2 Overflow Interrupt Enable
+	TIFR2   = 0x00;			//Timer2 INT Flag Reg: Clear Timer Overflow Flag
+	TIMSK2  = 1 << TOIE2;	//Timer2 INT Reg: Timer2 Overflow Interrupt Enable
 
-	TCCR2A  = 0x00;        //Timer2 Control Reg A: Normal port operation, Wave Gen Mode normal
-	TCCR2B  = 0x07;        //Timer2 Control Reg B: Timer Prescaler set to 1024
+	TCCR2A  = 0x00;			//Timer2 Control Reg A: Normal port operation, Wave Gen Mode normal
+	TCCR2B  = (1<<CS22) | (1<<CS21) | (1<<CS20);	//0x07;			//Timer2 Control Reg B: Timer Prescaler set to 1024
 
 	status_led = 0;
 	status_state = PROGRAM_FLOW_COMPLETED;
 	status_ticks = 62;
-}
-
-void status_set( uint8_t state) {
-	status_state = state;
 }
 
 //Timer2 Overflow Interrupt Vector, called every 1ms
@@ -57,16 +53,33 @@ ISR(TIMER2_OVF_vect) {
 
 	status_ticks--;
 	if ( status_ticks == 0) {
-		status_ticks = 62;
 
-		if ( status_state == PROGRAM_FLOW_PAUSED) {
-			status_led ^= 0x01;
+		if ( status_led) {
+			switch (sys.state) {
+			case STATE_IDLE:	status_ticks = 60; break;
+			case STATE_QUEUED:	status_ticks = 52; break;
+			case STATE_CYCLE:	status_ticks = 30; break;
+			case STATE_HOLD:	status_ticks = 50; break;
+			case STATE_HOMING:	status_ticks = 90; break;
+			case STATE_ALARM:	status_ticks = 10; break;
+			case STATE_CHECK_MODE:	status_ticks = 120; break;
+			}
+			STATUS_LED_PORT &= ~(1<<STATUS_LED_BIT);
+			status_led = 0;
 		} else {
-			status_led = (status_state == PROGRAM_FLOW_RUNNING);
-		}
+			switch (sys.state) {
+			case STATE_IDLE:	status_ticks = 2; break;
+			case STATE_QUEUED:	status_ticks = 10; break;
+			case STATE_CYCLE:	status_ticks = 30; break;
+			case STATE_HOLD:	status_ticks = 10; break;
+			case STATE_HOMING:	status_ticks = 20; break;
+			case STATE_ALARM:	status_ticks = 10; break;
+			case STATE_CHECK_MODE:	status_ticks = 120; break;
+			}
 
-		if ( status_led ) STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
-		else STATUS_LED_PORT &= ~(1<<STATUS_LED_BIT);
+			STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
+			status_led = 1;
+		}
 
 		TCNT2 = 1;
 		TIFR2 = 0;

@@ -25,8 +25,8 @@
 #include "system.h"
 #include "status.h"
 #include "settings.h"
+#include "protocol.h"
 #include "gcode.h"
-#include "planner.h"
 #include "motion_control.h"
 #include "spindle_control.h"
 #include "coolant_control.h"
@@ -79,12 +79,6 @@ static float to_millimeters(float value)
   return(gc.inches_mode ? (value * MM_PER_INCH) : value);
 }
 
-void gc_set_pgm_state( uint8_t s) {
-	gc.program_flow = s;
-	status_set( s);
-}
-
-         
 // Executes one line of 0-terminated G-Code. The line is assumed to contain only uppercase
 // characters and signed floating point values (no whitespace). Comments and block delete
 // characters have been removed. In this function, all units and positions are converted and 
@@ -92,11 +86,6 @@ void gc_set_pgm_state( uint8_t s) {
 // coordinates, respectively.
 uint8_t gc_execute_line(char *line) 
 {
-
-  // If in alarm state, don't process. Immediately return with error.
-  // NOTE: Might not be right place for this, but also prevents $N storing during alarm.
-  if (sys.state == STATE_ALARM) { return(STATUS_ALARM_LOCK); }
- 
   uint8_t char_counter = 0;  
   char letter;
   float value;
@@ -186,9 +175,9 @@ uint8_t gc_execute_line(char *line)
         }        
         // Set 'M' commands
         switch(int_value) {
-          case 0: gc_set_pgm_state( PROGRAM_FLOW_PAUSED); break; // Program pause
+          case 0: gc.program_flow = PROGRAM_FLOW_PAUSED; break; // Program pause
           case 1: break; // Optional stop not supported. Ignore.
-          case 2: case 30: gc_set_pgm_state( PROGRAM_FLOW_COMPLETED); break; // Program end and reset
+          case 2: case 30: gc.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset
           case 3: gc.spindle_direction = SPINDLE_ENABLE_CW; break;
           case 4: gc.spindle_direction = SPINDLE_ENABLE_CCW; break;
           case 5: gc.spindle_direction = SPINDLE_DISABLE; break;
@@ -268,10 +257,14 @@ uint8_t gc_execute_line(char *line)
     //  ([M6]: Tool change should be executed here.)
 
     // [M3,M4,M5]: Update spindle state
-    spindle_run(gc.spindle_direction, gc.spindle_speed);
+    if (bit_istrue(modal_group_words,bit(MODAL_GROUP_7))) {
+      spindle_run(gc.spindle_direction, gc.spindle_speed);
+    }
   
     // [*M7,M8,M9]: Update coolant state
-    coolant_run(gc.coolant_mode);
+    if (bit_istrue(modal_group_words,bit(MODAL_GROUP_8))) {
+      coolant_run(gc.coolant_mode);
+    }
   }
   
   // [G54,G55,...,G59]: Coordinate system selection
@@ -464,14 +457,14 @@ uint8_t gc_execute_line(char *line)
   
   // M0,M1,M2,M30: Perform non-running program flow actions. During a program pause, the buffer may 
   // refill and can only be resumed by the cycle start run-time command.
-  if (gc.program_flow) {
-    plan_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
+  if (gc.program_flow) { 
+    protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
     sys.auto_start = false; // Disable auto cycle start. Forces pause until cycle start issued.
-    
+  
     // If complete, reset to reload defaults (G92.2,G54,G17,G90,G94,M48,G40,M5,M9). Otherwise,
     // re-enable program flow after pause complete, where cycle start will resume the program.
     if (gc.program_flow == PROGRAM_FLOW_COMPLETED) { mc_reset(); }
-    else { gc_set_pgm_state( PROGRAM_FLOW_RUNNING); }
+    else { gc.program_flow = PROGRAM_FLOW_RUNNING; }
   }    
   
   return(gc.status_code);

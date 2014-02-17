@@ -20,8 +20,8 @@
 
 #include "system.h"
 #include "coolant_control.h"
-#include "planner.h"
 #include "i2c_master.h"
+#include "protocol.h"
 
 void coolant_init()
 {
@@ -31,21 +31,17 @@ void coolant_init()
 
 void coolant_stop()
 {
-	/*
     TWI_buffer_out[0] = COOLANT_DISABLE;
-    TWI_master_start_write( 0x5e, 1);
-    */
+//    TWI_master_start_write( 0x5e, 1);
 }
 
 
 void coolant_run(uint8_t mode)
 {
-  plan_synchronize(); // Ensure coolant turns on when specified in program.
+  protocol_buffer_synchronize(); // Ensure coolant turns on when specified in program.
 
-  /*
   // COOLANT_FLOOD_ENABLE = 1
   // COOLANT_MIST_ENABLE = 2
   TWI_buffer_out[0] = mode;
-  TWI_master_start_write( 0x5e, 1);
-  */
+//  TWI_master_start_write( 0x5e, 1);
 }

@@ -37,8 +37,8 @@
   #define SERIAL_UDRE   USART_UDRE_vect
 
   // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
-  #define STEPPING_DDR    DDRD
-  #define STEPPING_PORT   PORTD
+  #define STEP_DDR        DDRD
+  #define STEP_PORT       PORTD
   #define X_STEP_BIT      2  // Uno Digital Pin 2
   #define Y_STEP_BIT      3  // Uno Digital Pin 3
   #define Z_STEP_BIT      4  // Uno Digital Pin 4
@@ -74,7 +74,7 @@
   #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect   PCINT0_vect 
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
-
+/*
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR    DDRB
   #define SPINDLE_ENABLE_PORT   PORTB
@@ -86,12 +86,12 @@
   #define SPINDLE_DIRECTION_DDR   DDRB
   #define SPINDLE_DIRECTION_PORT  PORTB
   #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-
+*/
   // status display LED
   #define STATUS_LED_DDR   DDRB
   #define STATUS_LED_PORT  PORTB
   #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-
+/*
   // Define flood and mist coolant enable output pins.
   // NOTE: Uno analog pins 4 and 5 are reserved for an i2c interface, and may be installed at
   // a later date if flash and memory space allows.
@@ -103,7 +103,7 @@
     #define COOLANT_MIST_PORT  PORTC
     #define COOLANT_MIST_BIT   4 // Uno Analog Pin 4
   #endif  
-
+*/
   // Define user-control pinouts (cycle start, reset, feed hold) input pins.
   // NOTE: All pinouts pins must be on the same port and not on a port with other input pins (limits).
   #define PINOUT_DDR       DDRC
@@ -116,7 +116,7 @@
   #define PINOUT_INT_vect  PCINT1_vect
   #define PINOUT_PCMSK     PCMSK1 // Pin change interrupt register
   #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
-  
+/*
   #ifdef VARIABLE_SPINDLE
     // Advanced Configuration Below You should not need to touch these variables
     #define TCCRA_REGISTER	 TCCR2A
@@ -134,7 +134,7 @@
     #define SPINDLE_PWM_PORT  SPINDLE_ENABLE_PORT
     #define SPINDLE_PWM_BIT	  SPINDLE_ENABLE_BIT // Shared with SPINDLE_ENABLE.
   #endif // End of VARIABLE_SPINDLE
-
+*/
 #endif
 
 //----------------------------------------------------------------------------------------
@@ -152,9 +152,9 @@
   //#define LINE_BUFFER_SIZE	100
 
   // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
-  #define STEPPING_DDR      DDRA
-  #define STEPPING_PORT     PORTA
-  #define STEPPING_PIN      PINA
+  #define STEP_DDR      DDRA
+  #define STEP_PORT     PORTA
+  #define STEP_PIN      PINA
   #define X_STEP_BIT        2 // MEGA2560 Digital Pin 24
   #define Y_STEP_BIT        3 // MEGA2560 Digital Pin 25
   #define Z_STEP_BIT        4 // MEGA2560 Digital Pin 26

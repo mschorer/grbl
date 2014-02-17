@@ -21,11 +21,11 @@
 
 #include "system.h"
 #include "spindle_control.h"
-#include "planner.h"
+#include "protocol.h"
 #include "i2c_master.h"
 
 void spindle_init()
-{
+{    
   spindle_stop();
 }
 
@@ -38,7 +38,7 @@ void spindle_stop()
 void spindle_run(uint8_t direction, float rpm) 
 {
   // Empty planner buffer to ensure spindle is set when programmed.
-  plan_synchronize(); 
+  protocol_buffer_synchronize(); 
 
   // Halt or set spindle direction and rpm. 
   if (direction == SPINDLE_DISABLE) {

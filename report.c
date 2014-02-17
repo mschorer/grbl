@@ -32,6 +32,7 @@
 #include "settings.h"
 #include "gcode.h"
 #include "coolant_control.h"
+#include "spindle_control.h"
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -124,7 +125,7 @@ void report_feedback_message(uint8_t message_code)
 // Welcome message
 void report_init_message()
 {
-  printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n"));
+  printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " @" GRBL_VERSION_BUILD " ['$' for help]\r\n"));
 }
 
 // Grbl help message
@@ -260,9 +261,9 @@ void report_gcode_modes()
   }
 
   switch (gc.spindle_direction) {
-    case 1 : printPgmString(PSTR(" M3")); break;
-    case -1 : printPgmString(PSTR(" M4")); break;
-    case 0 : printPgmString(PSTR(" M5")); break;
+    case SPINDLE_ENABLE_CW  : printPgmString(PSTR(" M3")); break;
+    case SPINDLE_ENABLE_CCW  : printPgmString(PSTR(" M4")); break;
+    case SPINDLE_DISABLE : printPgmString(PSTR(" M5")); break;
   }
   
   switch (gc.coolant_mode) {
