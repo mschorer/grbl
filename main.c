@@ -32,7 +32,7 @@
 #include "limits.h"
 #include "report.h"
 #include "i2c_master.h"
-
+#include "status.h"
 
 // Declare system global variable structure
 system_t sys; 

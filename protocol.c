@@ -242,9 +242,8 @@ void protocol_execute_runtime()
     // cycle reinitializations. The stepper path should continue exactly as if nothing has happened.   
     // NOTE: EXEC_CYCLE_STOP is set by the stepper subsystem when a cycle or feed hold completes.
     if (rt_exec & EXEC_CYCLE_STOP) {
-      if (sys.state != STATE_QUEUED) {    
-        sys.state = STATE_IDLE;
-      }
+      if ( plan_get_current_block() ) { sys.state = STATE_QUEUED; }
+      else { sys.state = STATE_IDLE; }
       bit_false(sys.execute,EXEC_CYCLE_STOP);
     }
 
@@ -264,7 +263,7 @@ void protocol_execute_runtime()
 void protocol_buffer_synchronize()
 {
   // Check and set auto start to resume cycle after synchronize and caller completes.
-  if (sys.state == STATE_CYCLE) { sys.auto_start = true; }
+  if (sys.state == STATE_CYCLE) {sys.auto_start = true; }
   while (plan_get_current_block() || (sys.state == STATE_CYCLE)) { 
     protocol_execute_runtime();   // Check and execute run-time commands
     if (sys.abort) { return; } // Check for system abort

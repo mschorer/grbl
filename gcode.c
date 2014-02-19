@@ -23,7 +23,6 @@
    by Kramer, Proctor and Messina. */
 
 #include "system.h"
-#include "status.h"
 #include "settings.h"
 #include "protocol.h"
 #include "gcode.h"
@@ -79,6 +78,7 @@ static float to_millimeters(float value)
   return(gc.inches_mode ? (value * MM_PER_INCH) : value);
 }
 
+         
 // Executes one line of 0-terminated G-Code. The line is assumed to contain only uppercase
 // characters and signed floating point values (no whitespace). Comments and block delete
 // characters have been removed. In this function, all units and positions are converted and 
@@ -177,7 +177,7 @@ uint8_t gc_execute_line(char *line)
         switch(int_value) {
           case 0: gc.program_flow = PROGRAM_FLOW_PAUSED; break; // Program pause
           case 1: break; // Optional stop not supported. Ignore.
-          case 2: case 30: gc.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset
+          case 2: case 30: gc.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset 
           case 3: gc.spindle_direction = SPINDLE_ENABLE_CW; break;
           case 4: gc.spindle_direction = SPINDLE_ENABLE_CCW; break;
           case 5: gc.spindle_direction = SPINDLE_DISABLE; break;
@@ -258,7 +258,7 @@ uint8_t gc_execute_line(char *line)
 
     // [M3,M4,M5]: Update spindle state
     if (bit_istrue(modal_group_words,bit(MODAL_GROUP_7))) {
-      spindle_run(gc.spindle_direction, gc.spindle_speed);
+      spindle_run(gc.spindle_direction, gc.spindle_speed); 
     }
   
     // [*M7,M8,M9]: Update coolant state
@@ -465,7 +465,7 @@ uint8_t gc_execute_line(char *line)
     // re-enable program flow after pause complete, where cycle start will resume the program.
     if (gc.program_flow == PROGRAM_FLOW_COMPLETED) { mc_reset(); }
     else { gc.program_flow = PROGRAM_FLOW_RUNNING; }
-  }    
+  }
   
   return(gc.status_code);
 }

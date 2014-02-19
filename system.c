@@ -34,6 +34,7 @@ void system_init()
   PCICR |= (1 << PINOUT_INT);   // Enable Pin Change Interrupt
 }
 
+
 // Pin change interrupt for pin-out commands, i.e. cycle start, feed hold, and reset. Sets
 // only the runtime command execute variable to have the main program execute these when 
 // its ready. This works exactly like the character-based runtime commands when picked off

@@ -28,6 +28,9 @@
 #include "stepper.h"
 #include "settings.h"
 
+#ifndef NULL
+#define NULL 0
+#endif
 
 #define SOME_LARGE_VALUE 1.0E+38 // Used by rapids and acceleration maximization calculations. Just needs
                                  // to be larger than any feasible (mm/min)^2 or mm/sec^2 value.
@@ -228,7 +231,7 @@ void plan_discard_current_block()
 
 plan_block_t *plan_get_current_block() 
 {
-  if (block_buffer_head == block_buffer_tail) { return(NULL); } // Buffer empty
+  if (block_buffer_head == block_buffer_tail) { return(NULL); } // Buffer empty  
   return(&block_buffer[block_buffer_tail]);
 }
 
