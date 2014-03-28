@@ -32,6 +32,7 @@
 #include "settings.h"
 #include "gcode.h"
 #include "coolant_control.h"
+#include "planner.h"
 #include "spindle_control.h"
 
 
@@ -261,8 +262,8 @@ void report_gcode_modes()
   }
 
   switch (gc.spindle_direction) {
-    case SPINDLE_ENABLE_CW  : printPgmString(PSTR(" M3")); break;
-    case SPINDLE_ENABLE_CCW  : printPgmString(PSTR(" M4")); break;
+    case SPINDLE_ENABLE_CW : printPgmString(PSTR(" M3")); break;
+    case SPINDLE_ENABLE_CCW : printPgmString(PSTR(" M4")); break;
     case SPINDLE_DISABLE : printPgmString(PSTR(" M5")); break;
   }
   
@@ -349,6 +350,17 @@ void report_realtime_status()
     printFloat(print_position[i]);
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
   }
+    
+#ifdef USE_LINE_NUMBERS
+  // Report current line number
+  printPgmString(PSTR(",Ln:")); 
+  int32_t ln=0;
+  plan_block_t * pb = plan_get_current_block();
+  if(pb != NULL) {
+    ln = pb->line_number;
+  } 
+  printInteger(ln);
+#endif
     
   printPgmString(PSTR(">\r\n"));
 }

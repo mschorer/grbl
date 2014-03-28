@@ -39,7 +39,7 @@
 // segments, must pass through this routine before being passed to the planner. The seperation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
-void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
+void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, /* int spndl, */ int32_t line_number)
 {
   // If enabled, check for soft limit violations. Placed here all line motions are picked up
   // from everywhere in Grbl.
@@ -48,16 +48,19 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
   if (sys.state == STATE_CHECK_MODE) { return; }
     
-  // TODO: Backlash compensation may be installed here. Only need direction info to track when
-  // to insert a backlash line motion(s) before the intended line motion. Requires its own
+  // NOTE: Backlash compensation may be installed here. It will need direction info to track when
+  // to insert a backlash line motion(s) before the intended line motion and will require its own
   // plan_check_full_buffer() and check for system abort loop. Also for position reporting 
-  // backlash steps will need to be also tracked. Not sure what the best strategy is for this,
-  // i.e. keep the planner independent and do the computations in the status reporting, or let
-  // the planner handle the position corrections. The latter may get complicated.
-  // TODO: Backlash comp positioning values may need to be kept at a system level, i.e. tracking 
-  // true position after a feed hold in the middle of a backlash move. The difficulty is in making 
-  // sure that the stepper subsystem and planner are working in sync, and the status report 
-  // position also takes this into account.
+  // backlash steps will need to be also tracked, which will need to be kept at a system level.
+  // There are likely some other things that will need to be tracked as well. However, we feel
+  // that backlash compensation should NOT be handled by Grbl itself, because there are a myriad
+  // of ways to implement it and can be effective or ineffective for different CNC machines. This
+  // would be better handled by the interface as a post-processor task, where the original g-code
+  // is translated and inserts backlash motions that best suits the machine. 
+  // NOTE: Perhaps as a middle-ground, all that needs to be sent is a flag or special command that
+  // indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
+  // doesn't update the machine position values. Since the position values used by the g-code
+  // parser and planner are separate from the system machine positions, this is doable.
 
   // If the buffer is full: good! That means we are well ahead of the robot. 
   // Remain in this loop until there is room in the buffer.
@@ -68,7 +71,7 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
     else { break; }
   } while (1);
 
-  plan_buffer_line(target, feed_rate, invert_feed_rate);
+  plan_buffer_line(target, feed_rate, invert_feed_rate, /* spndl, */ line_number);
 
   // If idle, indicate to the system there is now a planned block in the buffer ready to cycle 
   // start. Otherwise ignore and continue on.
@@ -84,7 +87,7 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
 void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8_t axis_1, 
-  uint8_t axis_linear, float feed_rate, uint8_t invert_feed_rate, float radius, uint8_t isclockwise)
+  uint8_t axis_linear, float feed_rate, uint8_t invert_feed_rate, float radius, uint8_t isclockwise, /* int spndl, */ int32_t line_number)
 {      
   float center_axis0 = position[axis_0] + offset[axis_0];
   float center_axis1 = position[axis_1] + offset[axis_1];
@@ -180,14 +183,14 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
       arc_target[axis_0] = center_axis0 + r_axis0;
       arc_target[axis_1] = center_axis1 + r_axis1;
       arc_target[axis_linear] += linear_per_segment;
-      mc_line(arc_target, feed_rate, invert_feed_rate);
+      mc_line(arc_target, feed_rate, invert_feed_rate, /* spndl, */ line_number);
       
       // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
       if (sys.abort) { return; }
     }
   }
   // Ensure last segment arrives at target location.
-  mc_line(target, feed_rate, invert_feed_rate);
+  mc_line(target, feed_rate, invert_feed_rate, /* spndl, */ line_number);
 }
 
 
@@ -225,16 +228,16 @@ void mc_homing_cycle()
   #ifdef HOMING_CYCLE_2
     limits_go_home(HOMING_CYCLE_2);  // Homing cycle 2
   #endif
-  
+
   protocol_execute_runtime(); // Check for reset and set system abort.
   if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
 
   // Homing cycle complete! Setup system for normal operation.
   // -------------------------------------------------------------------------------------
-  
+
   // Gcode parser position was circumvented by the limits_go_home() routine, so sync position now.
   gc_sync_position();
-    
+  
   // Set idle state after homing completes and before returning to main program.  
   sys.state = STATE_IDLE;
   st_go_idle(); // Set idle state after homing completes

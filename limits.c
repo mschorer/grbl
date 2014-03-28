@@ -105,8 +105,8 @@ void limits_disable()
           mc_reset(); // Initiate system kill.
           sys.execute |= EXEC_CRIT_EVENT; // Indicate hard limit critical event
         }
-      }
-    }  
+      }  
+    }
   }
 #endif
 
@@ -149,7 +149,7 @@ void limits_go_home(uint8_t cycle_mask)
         n_active_axis++;
         if (!approach) { target[idx] = -max_travel; }
         else { target[idx] = max_travel; }
-       } else {
+      } else {
         target[idx] = 0.0;
       }
     }      
@@ -168,7 +168,7 @@ void limits_go_home(uint8_t cycle_mask)
   
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     uint8_t limit_state;
-    plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
+    plan_buffer_line(target, homing_rate, false, /*0,*/ HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
     do {
@@ -190,10 +190,10 @@ void limits_go_home(uint8_t cycle_mask)
       if (sys.execute & EXEC_RESET) { protocol_execute_runtime(); return; }
     } while (STEP_MASK & axislock);
     
-    st_reset(); // Force disable steppers and reset step segment buffer. Ensure homing motion is cleared.
+    st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
-    delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.  
+    delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
     // Reverse direction and reset homing rate for locate cycle(s).
     homing_rate = settings.homing_feed_rate;
@@ -225,7 +225,7 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
-  plan_buffer_line(target, settings.homing_seek_rate, false); // Bypass mc_line(). Directly plan motion.
+  plan_buffer_line(target, settings.homing_seek_rate, false, /* 0, */ HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
 
   // Initiate pull-off using main motion control routines. 
   // TODO : Clean up state routines so that this motion still shows homing state.
@@ -255,7 +255,7 @@ void limits_soft_check(float *target)
         do {
           protocol_execute_runtime();
           if (sys.abort) { return; }
-        } while (sys.state == STATE_HOLD);
+        } while ( sys.state != STATE_IDLE || sys.state != STATE_QUEUED);
       }
       
       mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.

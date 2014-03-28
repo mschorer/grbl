@@ -35,12 +35,9 @@ void spindle_stop()
     TWI_master_start_write( 0x5c, 1);
 }
 
-void spindle_run(uint8_t direction, float rpm) 
+void spindle_run(uint8_t direction, float rpm)
 {
-  // Empty planner buffer to ensure spindle is set when programmed.
-  protocol_buffer_synchronize(); 
-
-  // Halt or set spindle direction and rpm. 
+  // Halt or set spindle direction and rpm.
   if (direction == SPINDLE_DISABLE) {
   
     spindle_stop();
@@ -59,3 +56,4 @@ void spindle_run(uint8_t direction, float rpm)
     TWI_master_start_write( 0x5c, 1);
   }
 }
+

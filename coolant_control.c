@@ -38,8 +38,6 @@ void coolant_stop()
 
 void coolant_run(uint8_t mode)
 {
-  protocol_buffer_synchronize(); // Ensure coolant turns on when specified in program.
-
   // COOLANT_FLOOD_ENABLE = 1
   // COOLANT_MIST_ENABLE = 2
   TWI_buffer_out[0] = mode;

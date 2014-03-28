@@ -74,6 +74,11 @@
   #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect   PCINT0_vect 
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
+
+  // status display LED
+  #define STATUS_LED_DDR   DDRB
+  #define STATUS_LED_PORT  PORTB
+  #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
 /*
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR    DDRB
@@ -86,12 +91,7 @@
   #define SPINDLE_DIRECTION_DDR   DDRB
   #define SPINDLE_DIRECTION_PORT  PORTB
   #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-*/
-  // status display LED
-  #define STATUS_LED_DDR   DDRB
-  #define STATUS_LED_PORT  PORTB
-  #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-/*
+
   // Define flood and mist coolant enable output pins.
   // NOTE: Uno analog pins 4 and 5 are reserved for an i2c interface, and may be installed at
   // a later date if flash and memory space allows.
@@ -116,7 +116,7 @@
   #define PINOUT_INT_vect  PCINT1_vect
   #define PINOUT_PCMSK     PCMSK1 // Pin change interrupt register
   #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
-/*
+  
   #ifdef VARIABLE_SPINDLE
     // Advanced Configuration Below You should not need to touch these variables
     #define TCCRA_REGISTER	 TCCR2A
@@ -134,7 +134,7 @@
     #define SPINDLE_PWM_PORT  SPINDLE_ENABLE_PORT
     #define SPINDLE_PWM_BIT	  SPINDLE_ENABLE_BIT // Shared with SPINDLE_ENABLE.
   #endif // End of VARIABLE_SPINDLE
-*/
+
 #endif
 
 //----------------------------------------------------------------------------------------

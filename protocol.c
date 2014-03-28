@@ -263,7 +263,7 @@ void protocol_execute_runtime()
 void protocol_buffer_synchronize()
 {
   // Check and set auto start to resume cycle after synchronize and caller completes.
-  if (sys.state == STATE_CYCLE) {sys.auto_start = true; }
+  if (sys.state == STATE_CYCLE) { sys.auto_start = true; }
   while (plan_get_current_block() || (sys.state == STATE_CYCLE)) { 
     protocol_execute_runtime();   // Check and execute run-time commands
     if (sys.abort) { return; } // Check for system abort
