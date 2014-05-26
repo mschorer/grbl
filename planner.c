@@ -28,9 +28,6 @@
 #include "stepper.h"
 #include "settings.h"
 
-#ifndef NULL
-#define NULL 0
-#endif
 
 #define SOME_LARGE_VALUE 1.0E+38 // Used by rapids and acceleration maximization calculations. Just needs
                                  // to be larger than any feasible (mm/min)^2 or mm/sec^2 value.
@@ -262,7 +259,11 @@ uint8_t plan_check_full_buffer()
    is used in three ways: as a normal feed rate if invert_feed_rate is false, as inverse time if
    invert_feed_rate is true, or as seek/rapids rate if the feed_rate value is negative (and
    invert_feed_rate always false). */
-void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, /* int spndl, */ int32_t line_number)
+#ifdef USE_LINE_NUMBERS   
+void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number) 
+#else
+void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate) 
+#endif
 {
   // Prepare and initialize new block
   plan_block_t *block = &block_buffer[block_buffer_head];
@@ -270,9 +271,6 @@ void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, 
   block->millimeters = 0;
   block->direction_bits = 0;
   block->acceleration = SOME_LARGE_VALUE; // Scaled down to maximum acceleration later
-
-//  block->spindle = spndl;
-
   #ifdef USE_LINE_NUMBERS
     block->line_number = line_number;
   #endif

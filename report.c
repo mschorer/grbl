@@ -93,8 +93,10 @@ void report_alarm_message(int8_t alarm_code)
     printPgmString(PSTR("Hard/soft limit")); break;
     case ALARM_ABORT_CYCLE: 
     printPgmString(PSTR("Abort during cycle")); break;
+    case ALARM_PROBE_FAIL:
+    printPgmString(PSTR("Probe fail")); break;
   }
-  printPgmString(PSTR(". MPos?\r\n"));
+  printPgmString(PSTR("\r\n"));
   delay_ms(500); // Force delay to ensure message clears serial write buffer.
 }
 
@@ -126,7 +128,7 @@ void report_feedback_message(uint8_t message_code)
 // Welcome message
 void report_init_message()
 {
-  printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " [" GRBL_VERSION_BUILD "] ['$' for help]\r\n"));
+  printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n"));
 }
 
 // Grbl help message
@@ -188,8 +190,28 @@ void report_grbl_settings() {
 }
 
 
-// Prints gcode coordinate offset parameters
-void report_gcode_parameters()
+// Prints current probe parameters. Upon a probe command, these parameters are updated upon a
+// successful probe or upon a failed probe with the G38.3 without errors command (if supported). 
+// These values are retained until Grbl is power-cycled, whereby they will be re-zeroed.
+void report_probe_parameters()
+{
+  uint8_t i;
+  float print_position[N_AXIS];
+ 
+  // Report in terms of machine position.
+  printPgmString(PSTR("[Probe:")); 
+  for (i=0; i< N_AXIS; i++) {
+    print_position[i] = sys.probe_position[i]/settings.steps_per_mm[i];
+    if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) { print_position[i] *= INCH_PER_MM; }
+    printFloat(print_position[i]);
+    if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
+  }  
+  printPgmString(PSTR("]\r\n"));
+}
+
+
+// Prints Grbl NGC parameters (coordinate offsets, probing)
+void report_ngc_parameters()
 {
   float coord_data[N_AXIS];
   uint8_t coord_select, i;
@@ -224,6 +246,7 @@ void report_gcode_parameters()
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     else { printPgmString(PSTR("]\r\n")); }
   } 
+  report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 }
 
 
@@ -351,7 +374,7 @@ void report_realtime_status()
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
   }
     
-#ifdef USE_LINE_NUMBERS
+  #ifdef USE_LINE_NUMBERS
   // Report current line number
   printPgmString(PSTR(",Ln:")); 
   int32_t ln=0;
@@ -360,7 +383,7 @@ void report_realtime_status()
     ln = pb->line_number;
   } 
   printInteger(ln);
-#endif
+  #endif
     
   printPgmString(PSTR(">\r\n"));
 }

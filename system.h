@@ -40,6 +40,7 @@
 #include "cpu_map.h"
 #include "nuts_bolts.h"
 
+
 // Define system executor bit map. Used internally by runtime protocol as runtime command flags, 
 // which notifies the main program to execute the specified runtime command asynchronously.
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default
@@ -66,6 +67,7 @@
 #define STATE_HOLD       bit(5) // Executing feed hold
 // #define STATE_JOG     bit(6) // Jogging mode is unique like homing.
 
+
 // Define global system variables
 typedef struct {
   uint8_t abort;                 // System abort flag. Forces exit back to main loop for reset.
@@ -75,6 +77,8 @@ typedef struct {
   int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps. 
                                  // NOTE: This may need to be a volatile variable, if problems arise.                             
   uint8_t auto_start;            // Planner auto-start flag. Toggled off during feed hold. Defaulted by settings.
+  volatile uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
+  int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
 } system_t;
 extern system_t sys;
 

@@ -120,14 +120,14 @@ void limits_disable()
 void limits_go_home(uint8_t cycle_mask) 
 {
   if (sys.abort) { return; } // Block if system reset has been issued.
-  
+
   // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
   bool approach = true;
   float homing_rate = settings.homing_seek_rate;
   uint8_t invert_pin, idx;
   uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);
   float target[N_AXIS];
-
+  
   // Determine travel distance to the furthest homing switch based on user max travel settings.
   // NOTE: settings.max_travel[] is stored as a negative value.
   float max_travel = settings.max_travel[X_AXIS];
@@ -159,7 +159,7 @@ void limits_go_home(uint8_t cycle_mask)
   
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
 
-    // Reset homing axis locks based on cycle mask. 
+      // Reset homing axis locks based on cycle mask. 
     uint8_t axislock = 0;
     if (bit_istrue(cycle_mask,bit(X_AXIS))) { axislock |= (1<<X_STEP_BIT); }
     if (bit_istrue(cycle_mask,bit(Y_AXIS))) { axislock |= (1<<Y_STEP_BIT); }
@@ -168,7 +168,11 @@ void limits_go_home(uint8_t cycle_mask)
   
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     uint8_t limit_state;
-    plan_buffer_line(target, homing_rate, false, /*0,*/ HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
+    #ifdef USE_LINE_NUMBERS
+    plan_buffer_line(target, homing_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
+    #else
+    plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
+    #endif
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
     do {
@@ -225,8 +229,12 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
-  plan_buffer_line(target, settings.homing_seek_rate, false, /* 0, */ HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
-
+  #ifdef USE_LINE_NUMBERS
+  plan_buffer_line(target, settings.homing_seek_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
+  #else
+  plan_buffer_line(target, settings.homing_seek_rate, false); // Bypass mc_line(). Directly plan motion.
+  #endif
+  
   // Initiate pull-off using main motion control routines. 
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;

@@ -30,6 +30,8 @@
 #include "spindle_control.h"
 #include "coolant_control.h"
 #include "limits.h"
+#include "probe.h"
+#include "report.h"
 
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
@@ -39,7 +41,11 @@
 // segments, must pass through this routine before being passed to the planner. The seperation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
-void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, /* int spndl, */ int32_t line_number)
+#ifdef USE_LINE_NUMBERS
+void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number)
+#else
+void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
+#endif
 {
   // If enabled, check for soft limit violations. Placed here all line motions are picked up
   // from everywhere in Grbl.
@@ -71,8 +77,12 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, /* int sp
     else { break; }
   } while (1);
 
-  plan_buffer_line(target, feed_rate, invert_feed_rate, /* spndl, */ line_number);
-
+  #ifdef USE_LINE_NUMBERS
+  plan_buffer_line(target, feed_rate, invert_feed_rate, line_number);
+  #else
+  plan_buffer_line(target, feed_rate, invert_feed_rate);
+  #endif
+  
   // If idle, indicate to the system there is now a planned block in the buffer ready to cycle 
   // start. Otherwise ignore and continue on.
   if (!sys.state) { sys.state = STATE_QUEUED; }
@@ -86,8 +96,13 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, /* int sp
 // The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
+#ifdef USE_LINE_NUMBERS
 void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8_t axis_1, 
-  uint8_t axis_linear, float feed_rate, uint8_t invert_feed_rate, float radius, uint8_t isclockwise, /* int spndl, */ int32_t line_number)
+  uint8_t axis_linear, float feed_rate, uint8_t invert_feed_rate, float radius, uint8_t isclockwise, int32_t line_number)
+#else
+void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8_t axis_1, 
+  uint8_t axis_linear, float feed_rate, uint8_t invert_feed_rate, float radius, uint8_t isclockwise)
+#endif
 {      
   float center_axis0 = position[axis_0] + offset[axis_0];
   float center_axis1 = position[axis_1] + offset[axis_1];
@@ -183,14 +198,23 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
       arc_target[axis_0] = center_axis0 + r_axis0;
       arc_target[axis_1] = center_axis1 + r_axis1;
       arc_target[axis_linear] += linear_per_segment;
-      mc_line(arc_target, feed_rate, invert_feed_rate, /* spndl, */ line_number);
+      
+      #ifdef USE_LINE_NUMBERS
+      mc_line(arc_target, feed_rate, invert_feed_rate, line_number);
+      #else
+      mc_line(arc_target, feed_rate, invert_feed_rate);
+      #endif
       
       // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
       if (sys.abort) { return; }
     }
   }
   // Ensure last segment arrives at target location.
-  mc_line(target, feed_rate, invert_feed_rate, /* spndl, */ line_number);
+  #ifdef USE_LINE_NUMBERS
+  mc_line(target, feed_rate, invert_feed_rate, line_number);
+  #else
+  mc_line(target, feed_rate, invert_feed_rate);
+  #endif
 }
 
 
@@ -228,7 +252,7 @@ void mc_homing_cycle()
   #ifdef HOMING_CYCLE_2
     limits_go_home(HOMING_CYCLE_2);  // Homing cycle 2
   #endif
-
+    
   protocol_execute_runtime(); // Check for reset and set system abort.
   if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
 
@@ -244,6 +268,68 @@ void mc_homing_cycle()
 
   // If hard limits feature enabled, re-enable hard limits pin change register after homing cycle.
   limits_init();
+}
+
+
+// Perform tool length probe cycle. Requires probe switch.
+// NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
+#ifdef USE_LINE_NUMBERS
+void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number)
+#else
+void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
+#endif
+{
+  if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
+  protocol_buffer_synchronize(); // Finish all queued commands
+  if (sys.abort) { return; } // Return if system reset has been issued.
+
+  // Perform probing cycle. Planner buffer should be empty at this point.
+  #ifdef USE_LINE_NUMBERS
+  mc_line(target, feed_rate, invert_feed_rate, line_number);
+  #else
+  mc_line(target, feed_rate, invert_feed_rate);
+  #endif
+
+  //TODO - make sure the probe isn't already closed
+  sys.probe_state = PROBE_ACTIVE;
+
+  sys.execute |= EXEC_CYCLE_START;
+  do {
+    protocol_execute_runtime(); 
+    if (sys.abort) { return; } // Check for system abort
+  } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
+
+  if (sys.probe_state == PROBE_ACTIVE) { sys.execute |= EXEC_CRIT_EVENT; }
+  protocol_execute_runtime();   // Check and execute run-time commands
+  if (sys.abort) { return; } // Check for system abort
+
+  //Prep the new target based on the position that the probe triggered
+  uint8_t i;
+  for(i=0; i<N_AXIS; ++i){
+    target[i] = (float)sys.probe_position[i]/settings.steps_per_mm[i];
+  }
+
+  protocol_execute_runtime();
+
+  st_reset(); // Immediately force kill steppers and reset step segment buffer.
+  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+  plan_sync_position(); // Sync planner position to current machine position for pull-off move.
+
+  #ifdef USE_LINE_NUMBERS
+  mc_line(target, feed_rate, invert_feed_rate, line_number); // Bypass mc_line(). Directly plan homing motion.
+  #else
+  mc_line(target, feed_rate, invert_feed_rate); // Bypass mc_line(). Directly plan homing motion.
+  #endif
+
+  sys.execute |= EXEC_CYCLE_START;
+  protocol_buffer_synchronize(); // Complete pull-off motion.
+  if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
+
+  // Gcode parser position was circumvented by the this routine, so sync position now.
+  gc_sync_position();
+
+  //TODO - ouput a mandatory status update with the probe position.  What if another was recently sent?
+  report_probe_parameters();
 }
 
 

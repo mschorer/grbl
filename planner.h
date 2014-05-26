@@ -52,8 +52,6 @@ typedef struct {
   float millimeters;             // The remaining distance for this block to be executed in (mm)
   // uint8_t max_override;       // Maximum override value based on axis speed limits
 
-//  int spindle;
-
   #ifdef USE_LINE_NUMBERS
     int32_t line_number;
   #endif
@@ -66,7 +64,11 @@ void plan_reset();
 // Add a new linear movement to the buffer. target[N_AXIS] is the signed, absolute target position 
 // in millimeters. Feed rate specifies the speed of the motion. If feed rate is inverted, the feed
 // rate is taken to mean "frequency" and would complete the operation in 1/feed_rate minutes.
-void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, /* int spndl, */ int32_t line_number);
+#ifdef USE_LINE_NUMBERS
+void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number);
+#else
+void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate);
+#endif
 
 // Called when the current block is no longer needed. Discards the block and makes the memory
 // availible for new blocks.

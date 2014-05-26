@@ -31,7 +31,7 @@
 // and are similar/identical to other g-code interpreters by manufacturers (Haas,Fanuc,Mazak,etc).
 #define MODAL_GROUP_NONE 0
 #define MODAL_GROUP_0 1 // [G4,G10,G28,G30,G53,G92,G92.1] Non-modal
-#define MODAL_GROUP_1 2 // [G0,G1,G2,G3,G80] Motion
+#define MODAL_GROUP_1 2 // [G0,G1,G2,G3,G38.2,G80] Motion
 #define MODAL_GROUP_2 3 // [G17,G18,G19] Plane selection
 #define MODAL_GROUP_3 4 // [G90,G91] Distance mode
 #define MODAL_GROUP_4 5 // [M0,M1,M2,M30] Stopping
@@ -47,7 +47,8 @@
 #define MOTION_MODE_LINEAR 1 // G1
 #define MOTION_MODE_CW_ARC 2  // G2
 #define MOTION_MODE_CCW_ARC 3  // G3
-#define MOTION_MODE_CANCEL 4 // G80
+#define MOTION_MODE_PROBE 4 // G38.x
+#define MOTION_MODE_CANCEL 5 // G80
 
 #define PROGRAM_FLOW_RUNNING 0
 #define PROGRAM_FLOW_PAUSED 1 // M0, M1

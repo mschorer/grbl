@@ -40,6 +40,7 @@
 // Define Grbl alarm codes. Less than zero to distinguish alarm error from status error.
 #define ALARM_LIMIT_ERROR -1
 #define ALARM_ABORT_CYCLE -2
+#define ALARM_PROBE_FAIL -3
 
 // Define Grbl feedback message codes.
 #define MESSAGE_CRITICAL_EVENT 1
@@ -69,8 +70,11 @@ void report_grbl_settings();
 // Prints realtime status report
 void report_realtime_status();
 
-// Prints Grbl persistent coordinate parameters
-void report_gcode_parameters();
+// Prints recorded probe position
+void report_probe_parameters();
+
+// Prints Grbl NGC parameters (coordinate offsets, probe)
+void report_ngc_parameters();
 
 // Prints current g-code parser mode state
 void report_gcode_modes();

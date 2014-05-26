@@ -21,14 +21,11 @@
 
 #include "system.h"
 #include "nuts_bolts.h"
-//#include "spindle_control.h"
 #include "stepper.h"
 #include "settings.h"
 #include "planner.h"
+#include "probe.h"
 
-#ifndef NULL
-#define NULL 0
-#endif
 
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment 
@@ -79,9 +76,6 @@ typedef struct {
   #else
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
-
-//  int spindle;
-
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -142,8 +136,6 @@ typedef struct {
   float exit_speed;       // Exit speed of executing block (mm/min)
   float accelerate_until; // Acceleration ramp end measured from end of block (mm)
   float decelerate_after; // Deceleration ramp start measured from end of block (mm)
-
-//  int spindle;
 } st_prep_t;
 static st_prep_t prep;
 
@@ -318,8 +310,6 @@ ISR(TIMER1_COMPA_vect)
       // Initialize new step segment and load number of steps to execute
       st.exec_segment = &segment_buffer[segment_buffer_tail];
 
-//      spindle_run( st.exec_segment->spindle);
-
       #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         // With AMASS is disabled, set timer prescaler for segments with slow step frequencies (< 250Hz).
         TCCR1B = (TCCR1B & ~(0x07<<CS10)) | (st.exec_segment->prescaler<<CS10);
@@ -356,6 +346,10 @@ ISR(TIMER1_COMPA_vect)
       return; // Nothing to do but exit.
     }  
   }
+  
+  
+  // Check probing state.
+  probe_state_monitor();
    
   // Reset step out bits.
   st.step_outbits = 0; 
@@ -521,8 +515,6 @@ void st_prep_buffer()
       pl_block = plan_get_current_block(); // Query planner for a queued block
       if (pl_block == NULL) { return; } // No planner blocks. Exit.
                       
-//      prep.spindle = pl_block->spindle;
-
       // Check if the segment buffer completed the last planner block. If so, load the Bresenham
       // data for the block. If not, we are still mid-block and the velocity profile was updated. 
       if (prep.flag_partial_block) {
@@ -554,7 +546,7 @@ void st_prep_buffer()
         // Initialize segment buffer data for generating the segments.
         prep.steps_remaining = pl_block->step_event_count;
         prep.step_per_mm = prep.steps_remaining/pl_block->millimeters;
-        prep.req_mm_increment = REQ_MM_INCREMENT_SCALAR*pl_block->millimeters/prep.steps_remaining;
+        prep.req_mm_increment = REQ_MM_INCREMENT_SCALAR/prep.step_per_mm;
         
         prep.dt_remainder = 0.0; // Reset for new planner block
 

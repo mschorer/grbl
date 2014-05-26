@@ -57,24 +57,34 @@ ISR(TIMER2_OVF_vect) {
 		if ( status_led) {
 			switch (sys.state) {
 			case STATE_IDLE:	status_ticks = 60; break;
-			case STATE_QUEUED:	status_ticks = 52; break;
-			case STATE_CYCLE:	status_ticks = 30; break;
-			case STATE_HOLD:	status_ticks = 50; break;
+
+			case STATE_QUEUED:	status_ticks = 40; break;
+			case STATE_HOLD:	status_ticks = 20; break;
+
+			case STATE_CYCLE:	status_ticks = 62; break;
+
 			case STATE_HOMING:	status_ticks = 90; break;
-			case STATE_ALARM:	status_ticks = 10; break;
+			case STATE_ALARM:	status_ticks = 16; break;
+
 			case STATE_CHECK_MODE:	status_ticks = 120; break;
+			default: status_ticks = 2;
 			}
 			STATUS_LED_PORT &= ~(1<<STATUS_LED_BIT);
 			status_led = 0;
 		} else {
 			switch (sys.state) {
 			case STATE_IDLE:	status_ticks = 2; break;
-			case STATE_QUEUED:	status_ticks = 10; break;
-			case STATE_CYCLE:	status_ticks = 30; break;
-			case STATE_HOLD:	status_ticks = 10; break;
-			case STATE_HOMING:	status_ticks = 20; break;
-			case STATE_ALARM:	status_ticks = 10; break;
-			case STATE_CHECK_MODE:	status_ticks = 120; break;
+
+			case STATE_QUEUED:	status_ticks = 22; break;
+			case STATE_HOLD:	status_ticks = 42; break;
+
+			case STATE_CYCLE:	status_ticks = 62; break;
+
+			case STATE_HOMING:	status_ticks = 24; break;
+			case STATE_ALARM:	status_ticks = 16; break;
+			case STATE_CHECK_MODE:	status_ticks = 124; break;
+
+			default: status_ticks = 248;
 			}
 
 			STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
