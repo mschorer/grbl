@@ -29,7 +29,7 @@ volatile uint8_t TWI_target_slave_addr;
 volatile uint8_t TWI_status;
 #define TWI_WRITE_STATE 0x01
 #define TWI_READ_STATE 0x02
-volatile uint8_t TWI_operation;
+//volatile uint8_t TWI_operation;
 
 // call types
 volatile uint8_t TWI_master_state;

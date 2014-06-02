@@ -22,12 +22,15 @@
 #include "system.h"
 #include "spindle_control.h"
 #include "protocol.h"
+#include "gcode.h"
 #include "i2c_master.h"
+
 
 void spindle_init()
 {    
   spindle_stop();
 }
+
 
 void spindle_stop()
 {
@@ -35,25 +38,24 @@ void spindle_stop()
     TWI_master_start_write( 0x5c, 1);
 }
 
-void spindle_run(uint8_t direction, float rpm)
-{
-  // Halt or set spindle direction and rpm.
-  if (direction == SPINDLE_DISABLE) {
-  
-    spindle_stop();
-  
-  } else {
-/*
-    switch (direction) {
-    case SPINDLE_ENABLE_CW:
-    case SPINDLE_ENABLE_CCW:
-    default:
-    }
-*/
-    uint8_t rpm_100 = floor( rpm / 100);
 
-    TWI_buffer_out[0] = rpm_100;
-    TWI_master_start_write( 0x5c, 1);
+void spindle_run(uint8_t direction, float rpm) 
+{
+  if (sys.state == STATE_CHECK_MODE) { return; }
+  
+  // Empty planner buffer to ensure spindle is set when programmed.
+  protocol_buffer_synchronize(); 
+
+  // Halt or set spindle direction and rpm. 
+  if (direction == SPINDLE_DISABLE) {
+
+    spindle_stop();
+
+  } else {
+
+	uint8_t rpm_100 = floor( rpm / 100);
+
+	TWI_buffer_out[0] = rpm_100;
+	TWI_master_start_write( 0x5c, 1);
   }
 }
-

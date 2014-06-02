@@ -126,7 +126,7 @@ ISR(TWI_vect){
         case TWI_data_received_nack_returned:            
             TWI_buffer_in[TWI_buffer_pos++]=TWDR; // save byte
             TWCR = TWI_STOP; // release the buss
-            while(TWCR & (1<<TWSTO)); // wait for it**
+            //while(TWCR & (1<<TWSTO)); // wait for it**
             TWI_busy=0;
             break;
 
