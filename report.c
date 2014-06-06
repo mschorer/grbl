@@ -247,6 +247,20 @@ void report_ngc_parameters()
     else { printPgmString(PSTR("]\r\n")); }
   } 
   report_probe_parameters(); // Print probe parameters. Not persistent in memory.
+
+  // Print tool table which are not persistent in memory
+  for (i=0; i < N_TOOL_TABLE; i++) {
+	printPgmString(PSTR("[T"));
+	print_uint8_base10( i+1);
+	printPgmString(PSTR(" R"));
+	printFloat( gc_state.tool_table[i].r);
+	printPgmString(PSTR(" XYZ "));
+	for ( coord_select=0; coord_select<N_AXIS; coord_select++) {
+		printFloat(gc_state.tool_table[i].xyz[ coord_select]);
+		if (coord_select < (N_AXIS-1)) { printPgmString(PSTR(",")); }
+	}
+	printPgmString(PSTR("]\r\n"));
+  }
 }
 
 

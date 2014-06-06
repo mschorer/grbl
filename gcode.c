@@ -253,12 +253,13 @@ uint8_t gc_execute_line(char *line)
               case 2: case 30: gc_block.modal.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset 
             }
             break;
-          case 3: case 4: case 5: 
+          case 3: case 4: case 5: case 6:
             word_bit = MODAL_GROUP_M7; 
             switch(int_value) {
               case 3: gc_block.modal.spindle = SPINDLE_ENABLE_CW; break;
               case 4: gc_block.modal.spindle = SPINDLE_ENABLE_CCW; break;
               case 5: gc_block.modal.spindle = SPINDLE_DISABLE; break;
+              case 6: gc_block.modal.tool = gc_block.values.t; break;
             }
             break;            
          #ifdef ENABLE_M7  
@@ -306,7 +307,7 @@ uint8_t gc_execute_line(char *line)
           // case 'Q': // Not supported
           case 'R': word_bit = WORD_R; gc_block.values.r = value; break;
           case 'S': word_bit = WORD_S; gc_block.values.s = value; break;
-          case 'T': word_bit = WORD_T; break; // gc.values.t = int_value;
+          case 'T': word_bit = WORD_T; gc_block.values.t = int_value; break;
           case 'X': word_bit = WORD_X; gc_block.values.xyz[X_AXIS] = value; axis_words |= (1<<X_AXIS); break;
           case 'Y': word_bit = WORD_Y; gc_block.values.xyz[Y_AXIS] = value; axis_words |= (1<<Y_AXIS); break;
           case 'Z': word_bit = WORD_Z; gc_block.values.xyz[Z_AXIS] = value; axis_words |= (1<<Z_AXIS); break;
@@ -426,6 +427,7 @@ uint8_t gc_execute_line(char *line)
   // bit_false(value_words,bit(WORD_S)); // NOTE: Single-meaning value word. Set at end of error-checking.
     
   // [5. Select tool ]: NOT SUPPORTED. T is negative (done.) Not an integer. Greater than max tool value.
+  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.tool; }
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
   // [6. Change tool ]: N/A
@@ -500,28 +502,55 @@ uint8_t gc_execute_line(char *line)
       // [G10 L20 Errors]: P must be 0 to nCoordSys(max 9). Axis words missing (done.)
       if (bit_isfalse(value_words,((1<<WORD_P)|(1<<WORD_L)))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P/L word missing]
       int_value = trunc(gc_block.values.p); // Convert p value to int.
-      if (int_value > N_COORDINATE_SYSTEM) { FAIL(STATUS_GCODE_UNSUPPORTED_COORD_SYS); } // [Greater than N sys]
-      if (gc_block.values.l != 20) {
-        if (gc_block.values.l == 2) {
-          if (bit_istrue(value_words,bit(WORD_R))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
-        } else { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [Unsupported L]
-      }
-      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
-    
-      // Load EEPROM coordinate data and pre-calculate the new coordinate data.
-      if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
-      else { int_value = gc_state.modal.coord_select; } // Index P0 as the active coordinate system
-      if (!settings_read_coord_data(int_value,parameter_data)) { FAIL(STATUS_SETTING_READ_FAIL); } // [EEPROM read fail]
-      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
-        // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
-        if (bit_istrue(axis_words,bit(idx)) ) {
-          if (gc_block.values.l == 20) {
-            // NOTE: Undefined if G92 offsets apply to this calculation. Omitted.
-            parameter_data[idx] = gc_state.position[idx]-gc_block.values.xyz[idx]; // L20: Update axis current position to target
-          } else {
-            parameter_data[idx] = gc_block.values.xyz[idx]; // L2: Update coordinate system axis
-          }
-        }
+
+      switch( gc_block.values.l) {
+      	  case 1:
+      	      if (int_value > N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); } // [Greater than N sys]
+//      	      if (bit_istrue(value_words,bit(WORD_X)|bit(WORD_Y))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
+      	      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
+
+      	      // Load EEPROM coordinate data and pre-calculate the new coordinate data.
+      	      if (int_value > 0) { int_value--; } // Adjust Px for zero based indexing.
+      	      else { int_value = gc_state.tool; } // keep current tool
+
+      	      if (bit_istrue(value_words,bit(WORD_R))) {
+      	    	  gc_state.tool_table[ int_value].r = gc_block.values.r;
+      	    	  bit_false(value_words,(bit(WORD_R)));
+      	      }
+      	      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+				// Update axes defined only in block. Always in machine coordinates. Can change non-active system.
+				if (bit_istrue(axis_words,bit(idx)) ) {
+		      	      gc_state.tool_table[ int_value].xyz[ idx] = gc_block.values.xyz[ idx];
+				}
+			  }
+    	  break;
+
+      	  case 2:
+  	          if (bit_istrue(value_words,bit(WORD_R))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
+      	  case 20:
+      	      if (int_value > N_COORDINATE_SYSTEM) { FAIL(STATUS_GCODE_UNSUPPORTED_COORD_SYS); } // [Greater than N sys]
+
+      	      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
+
+      	      // Load EEPROM coordinate data and pre-calculate the new coordinate data.
+      	      if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
+      	      else { int_value = gc_state.modal.coord_select; } // Index P0 as the active coordinate system
+      	      if (!settings_read_coord_data(int_value,parameter_data)) { FAIL(STATUS_SETTING_READ_FAIL); } // [EEPROM read fail]
+      	      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+      	        // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
+      	        if (bit_istrue(axis_words,bit(idx)) ) {
+      	          if (gc_block.values.l == 20) {
+      	            // NOTE: Undefined if G92 offsets apply to this calculation. Omitted.
+      	            parameter_data[idx] = gc_state.position[idx]-gc_block.values.xyz[idx]; // L20: Update axis current position to target
+      	          } else {
+      	            parameter_data[idx] = gc_block.values.xyz[idx]; // L2: Update coordinate system axis
+      	          }
+      	        }
+      	      }
+    	  break;
+
+      	  default:
+      		FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
       }
       break;
     case NON_MODAL_SET_COORDINATE_OFFSET:
@@ -781,22 +810,30 @@ uint8_t gc_execute_line(char *line)
     // Update running spindle only if not in check mode and not already enabled.
     if (gc_state.modal.spindle != SPINDLE_DISABLE) {
 
-    	if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
+//    	if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
     	protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
     	spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
     }
   }
     
-  // [5. Select tool ]: NOT SUPPORTED
+  // [5. Select tool ]:
+  if (gc_state.modal.tool != gc_block.values.t) {
+	  gc_state.modal.tool = gc_block.modal.tool;
+  }
 
-  // [6. Change tool ]: NOT SUPPORTED
+  // [6. Change tool ]:
+  if (gc_state.tool != gc_block.modal.tool) {
+//    sys.auto_start = false;
+    protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
+	gc_state.tool = gc_block.modal.tool;
+  }
 
   // [7. Spindle control ]:
   if (gc_state.modal.spindle != gc_block.modal.spindle) {
     gc_state.modal.spindle = gc_block.modal.spindle;    
 
     // Update spindle control and apply spindle speed when enabling it in this block.    
-    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
+//    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
     protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
     spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
   }
@@ -805,7 +842,7 @@ uint8_t gc_execute_line(char *line)
   if (gc_state.modal.coolant != gc_block.modal.coolant) {
     gc_state.modal.coolant = gc_block.modal.coolant;
 
-    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
+//    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
     protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
     coolant_run(gc_state.modal.coolant);
   }
@@ -842,14 +879,16 @@ uint8_t gc_execute_line(char *line)
   switch(gc_block.non_modal_command) {
     case NON_MODAL_SET_COORDINATE_DATA:
 
+		if ( gc_block.values.l == 2 || gc_block.values.l == 20) {
+		  int_value = trunc(gc_block.values.p); // Convert p value to int.
+		  if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
+		  else { int_value = gc_state.modal.coord_select; } // Index P0 as the active coordinate system
+
+		  settings_write_coord_data(int_value,parameter_data);
+		  // Update system coordinate system if currently active.
+		  if (gc_state.modal.coord_select == int_value) { memcpy(gc_state.coord_system,parameter_data,sizeof(parameter_data)); }
+		}
 // TODO: See if I can clean up this int_value.
-      int_value = trunc(gc_block.values.p); // Convert p value to int.
-      if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
-      else { int_value = gc_state.modal.coord_select; } // Index P0 as the active coordinate system
-      
-      settings_write_coord_data(int_value,parameter_data);
-      // Update system coordinate system if currently active.
-      if (gc_state.modal.coord_select == int_value) { memcpy(gc_state.coord_system,parameter_data,sizeof(parameter_data)); }
       break;
     case NON_MODAL_GO_HOME_0: case NON_MODAL_GO_HOME_1: 
       // Move to intermediate position before going home. Obeys current coordinate system and offsets 

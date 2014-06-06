@@ -27,6 +27,7 @@
 #include "motion_control.h"
 #include "limits.h"
 #include "report.h"
+#include "gcode.h"
 
 
 #define HOMING_AXIS_SEARCH_SCALAR  1.5  // Axis search distance multiplier. Must be > 1.
@@ -221,8 +222,8 @@ void limits_go_home(uint8_t cycle_mask)
         target[idx] = settings.homing_pulloff+settings.max_travel[idx];
         sys.position[idx] = lround(settings.max_travel[idx]*settings.steps_per_mm[idx]);
       } else {
-        target[idx] = -settings.homing_pulloff;
-        sys.position[idx] = 0;
+        target[idx] = 0;
+        sys.position[idx] = settings.homing_pulloff;
       }
     } else { // Non-active cycle axis. Set target to not move during pull-off. 
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
@@ -253,7 +254,7 @@ void limits_soft_check(float *target)
 {
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) { 
-    if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) {  // NOTE: max_travel is stored as negative
+    if (target[idx] > 0 || target[idx] < (( idx != Z_AXIS) ? settings.max_travel[idx] : ( settings.max_travel[idx] + gc_state.tool_table[ gc_block.modal.tool].xyz[Z_AXIS]))) {  // NOTE: max_travel is stored as negative
     
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 
       // workspace volume so just come to a controlled stop so position is not lost. When complete
@@ -267,7 +268,7 @@ void limits_soft_check(float *target)
       }
       
       mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.
-      sys.execute |= EXEC_CRIT_EVENT; // Indicate soft limit critical event
+      sys.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate soft limit critical event
       protocol_execute_runtime(); // Execute to enter critical event loop and system abort
       return;
     
