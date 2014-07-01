@@ -27,24 +27,52 @@
 
 void coolant_init()
 {
-  coolant_stop();
+#if ( COOLANT_CTRL == CTRL_PIN)
+	COOLANT_FLOOD_DDR |= (1 << COOLANT_FLOOD_BIT);
+	#ifdef ENABLE_M7
+	COOLANT_MIST_DDR |= (1 << COOLANT_MIST_BIT);
+	#endif
+#endif
+
+	coolant_stop();
 }
 
 
 void coolant_stop()
 {
-    TWI_buffer_out[0] = COOLANT_DISABLE;
+#if ( COOLANT_CTRL == CTRL_PIN)
+	COOLANT_FLOOD_PORT &= ~(1 << COOLANT_FLOOD_BIT);
+	#ifdef ENABLE_M7
+	COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
+	#endif
+#elif ( COOLANT_CTRL == CTRL_I2C)
+
+	TWI_buffer_out[0] = COOLANT_DISABLE;
 //    TWI_master_start_write( 0x5e, 1);
+#endif
 }
 
 
 void coolant_run(uint8_t mode)
 {
-  if (sys.state == STATE_CHECK_MODE) { return; }
-  
-  // COOLANT_FLOOD_ENABLE = 1
-  // COOLANT_MIST_ENABLE = 2
-  TWI_buffer_out[0] = mode;
-  //  TWI_master_start_write( 0x5e, 1);
-}
+	if (sys.state == STATE_CHECK_MODE) { return; }
 
+#if ( COOLANT_CTRL == CTRL_PIN)
+	if (mode == COOLANT_FLOOD_ENABLE) {
+	COOLANT_FLOOD_PORT |= (1 << COOLANT_FLOOD_BIT);
+
+	#ifdef ENABLE_M7
+	} else if (mode == COOLANT_MIST_ENABLE) {
+	  COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT);
+	#endif
+
+	} else {
+	coolant_stop();
+	}
+#elif ( COOLANT_CTRL == CTRL_I2C)
+	// COOLANT_FLOOD_ENABLE = 1
+	// COOLANT_MIST_ENABLE = 2
+	TWI_buffer_out[0] = mode;
+	//  TWI_master_start_write( 0x5e, 1);
+#endif
+}

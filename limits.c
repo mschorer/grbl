@@ -87,7 +87,7 @@ void limits_disable()
     if (sys.state != STATE_ALARM) {
       if (bit_isfalse(sys.execute,EXEC_ALARM)) {
         mc_reset(); // Initiate system kill.
-        sys.execute |= EXEC_CRIT_EVENT; // Indicate hard limit critical event
+        bit_true(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT));	// Indicate hard limit critical event
       }
     }  
   }
@@ -104,7 +104,7 @@ void limits_disable()
         if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { bits ^= LIMIT_MASK; }
         if (bits & LIMIT_MASK) {
           mc_reset(); // Initiate system kill.
-          sys.execute |= EXEC_CRIT_EVENT; // Indicate hard limit critical event
+          bit_true(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT)); // Indicate hard limit critical event
         }
       }  
     }
@@ -219,8 +219,8 @@ void limits_go_home(uint8_t cycle_mask)
     // NOTE: settings.max_travel[] is stored as a negative value.
     if (cycle_mask & bit(idx)) {
       if ( settings.homing_dir_mask & get_direction_mask(idx) ) {
-        target[idx] = settings.homing_pulloff+settings.max_travel[idx];
-        sys.position[idx] = lround(settings.max_travel[idx]*settings.steps_per_mm[idx]);
+        target[idx] = settings.max_travel[idx];
+        sys.position[idx] = lround((settings.max_travel[idx]+settings.homing_pulloff)*settings.steps_per_mm[idx]);
       } else {
         target[idx] = 0;
         sys.position[idx] = settings.homing_pulloff;
@@ -239,7 +239,7 @@ void limits_go_home(uint8_t cycle_mask)
   // Initiate pull-off using main motion control routines. 
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
-  sys.execute |= EXEC_CYCLE_START;
+  bit_true(sys.execute, (EXEC_CYCLE_START));
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
   
@@ -260,7 +260,7 @@ void limits_soft_check(float *target)
       // workspace volume so just come to a controlled stop so position is not lost. When complete
       // enter alarm mode.
       if (sys.state == STATE_CYCLE) {
-        sys.execute |= EXEC_FEED_HOLD;
+        bit_true(sys.execute, (EXEC_FEED_HOLD));
         do {
           protocol_execute_runtime();
           if (sys.abort) { return; }
@@ -268,7 +268,7 @@ void limits_soft_check(float *target)
       }
       
       mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.
-      sys.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate soft limit critical event
+      bit_true(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT));
       protocol_execute_runtime(); // Execute to enter critical event loop and system abort
       return;
     

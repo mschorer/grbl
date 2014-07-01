@@ -509,14 +509,16 @@ uint8_t gc_execute_line(char *line)
 //      	      if (bit_istrue(value_words,bit(WORD_X)|bit(WORD_Y))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
       	      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
 
-      	      // Load EEPROM coordinate data and pre-calculate the new coordinate data.
+      	      // tool index
       	      if (int_value > 0) { int_value--; } // Adjust Px for zero based indexing.
       	      else { int_value = gc_state.tool; } // keep current tool
 
+      	      // set tool radius
       	      if (bit_istrue(value_words,bit(WORD_R))) {
       	    	  gc_state.tool_table[ int_value].r = gc_block.values.r;
       	    	  bit_false(value_words,(bit(WORD_R)));
       	      }
+      	      // set tool xyz-offsets
       	      for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
 				// Update axes defined only in block. Always in machine coordinates. Can change non-active system.
 				if (bit_istrue(axis_words,bit(idx)) ) {
@@ -566,7 +568,7 @@ uint8_t gc_execute_line(char *line)
         }
       }
       break;
-      
+
     default:
     
       // At this point, the rest of the axis-explicit commands treat the axis values as the traditional

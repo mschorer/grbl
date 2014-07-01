@@ -93,6 +93,14 @@
 // NOTE: The M8 flood coolant control pin on analog pin 4 will still be functional regardless.
 #define ENABLE_M7 // Mist coolant disabled by default. See config.h to enable/disable.
 
+#define CTRL_OFF 0
+#define CTRL_PIN 1
+#define CTRL_I2C 2
+
+#define SPINDLE_RPM_SCALE ( 12 * 710 / 125)
+
+#define COOLANT_CTRL CTRL_I2C
+#define SPINDLE_CTRL CTRL_I2C
 
 // ---------------------------------------------------------------------------------------
 // ADVANCED CONFIGURATION OPTIONS:
