@@ -25,7 +25,7 @@
 #include "system.h"
 
 #define GRBL_VERSION "0.9e"
-#define GRBL_VERSION_BUILD "20140701.0"
+#define GRBL_VERSION_BUILD "20140701.3"
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
