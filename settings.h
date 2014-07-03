@@ -25,7 +25,7 @@
 #include "system.h"
 
 #define GRBL_VERSION "0.9e"
-#define GRBL_VERSION_BUILD "20140701.3"
+#define GRBL_VERSION_BUILD "20140701.1"
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
@@ -57,7 +57,7 @@
 #define SETTING_INDEX_G30    N_COORDINATE_SYSTEM+1  // Home position 2
 // #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
-#define N_TOOL_TABLE 4  // Number of supported tools
+#define N_TOOL_TABLE 5  // Number of supported tools + 1, #0 is used as a zero-offset tool
 
 // Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
 typedef struct {

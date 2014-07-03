@@ -251,7 +251,7 @@ void report_ngc_parameters()
   // Print tool table which are not persistent in memory
   for (i=0; i < N_TOOL_TABLE; i++) {
 	printPgmString(PSTR("[T"));
-	print_uint8_base10( i+1);
+	print_uint8_base10( i);
 	printPgmString(PSTR(" R"));
 	printFloat( gc_state.tool_table[i].r);
 	printPgmString(PSTR(" XYZ "));

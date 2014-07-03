@@ -223,7 +223,7 @@ void limits_go_home(uint8_t cycle_mask)
         sys.position[idx] = lround((settings.max_travel[idx]+settings.homing_pulloff)*settings.steps_per_mm[idx]);
       } else {
         target[idx] = 0;
-        sys.position[idx] = settings.homing_pulloff;
+        sys.position[idx] = settings.homing_pulloff*settings.steps_per_mm[idx];
       }
     } else { // Non-active cycle axis. Set target to not move during pull-off. 
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];

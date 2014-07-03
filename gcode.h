@@ -150,8 +150,8 @@ typedef struct {
 } gc_values_t;
 
 typedef struct {
-  float r;         // Arc radius
-  float xyz[3];    // X,Y,Z Translational axes
+  float r;         // tool radius
+  float xyz[3];    // tool offsets for X,Y,Z axes
 } gc_tools_t;
 
 
