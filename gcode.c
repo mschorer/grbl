@@ -229,6 +229,18 @@ uint8_t gc_execute_line(char *line)
             if (int_value == 20) { gc_block.modal.units = UNITS_MODE_INCHES; }  // G20
             else { gc_block.modal.units = UNITS_MODE_MM; } // G21
             break;
+          case 43: case 49:
+            word_bit = MODAL_GROUP_G8;
+            // NOTE: The NIST g-code standard vaguely states that when a tool length offset is changed,
+            // there cannot be any axis motion or coordinate offsets updated. Meaning G43, G43.1, and G49
+            // all are explicit axis commands, regardless if they require axis words or not.
+            switch (int_value) {
+				case 49: gc_block.modal.tool_comp = 0; break;
+				case 43: gc_block.modal.tool_comp = gc_block.values.h; break;
+				default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
+            } // [Unsupported G43.x command]
+            mantissa = 0; // Set to zero to indicate valid non-integer G command.
+            break;
           case 54: case 55: case 56: case 57: case 58: case 59: 
             // NOTE: G59.x are not supported. (But their int_values would be 60, 61, and 62.)
             word_bit = MODAL_GROUP_G12;
@@ -299,7 +311,7 @@ uint8_t gc_execute_line(char *line)
           // case 'C': // Not supported
           // case 'D': // Not supported
           case 'F': word_bit = WORD_F; gc_block.values.f = value; break;
-          // case 'H': // Not supported
+          case 'H': word_bit = WORD_H; gc_block.values.h = int_value; break;
           case 'I': word_bit = WORD_I; gc_block.values.ijk[X_AXIS] = value; ijk_words |= (1<<X_AXIS); break;
           case 'J': word_bit = WORD_J; gc_block.values.ijk[Y_AXIS] = value; ijk_words |= (1<<Y_AXIS); break;
           case 'K': word_bit = WORD_K; gc_block.values.ijk[Z_AXIS] = value; ijk_words |= (1<<Z_AXIS); break;
@@ -430,8 +442,11 @@ uint8_t gc_execute_line(char *line)
   // bit_false(value_words,bit(WORD_S)); // NOTE: Single-meaning value word. Set at end of error-checking.
     
   // [5. Select tool ]: NOT SUPPORTED. T is negative (done.) Not an integer. Greater than max tool value.
-  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.tool; }
+  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.modal.tool; }
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
+
+  // [5a. Select tool offset]:
+  if (bit_isfalse(value_words,bit(WORD_H))) { gc_block.values.h = gc_state.modal.tool_comp; }
 
   // [6. Change tool ]: N/A
   // [7. Spindle control ]: N/A
@@ -513,7 +528,7 @@ uint8_t gc_execute_line(char *line)
       	      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
 
       	      // tool index
-      	      if (int_value < 0) { int_value = gc_state.tool; } // keep current tool
+      	      if (int_value < 0) { int_value = gc_state.modal.tool; } // keep current tool
 
       	      if ( int_value > 0) {
 				  // set tool radius
@@ -548,6 +563,7 @@ uint8_t gc_execute_line(char *line)
       	          if (gc_block.values.l == 20) {
       	            // NOTE: Undefined if G92 offsets apply to this calculation. Omitted.
       	            parameter_data[idx] = gc_state.position[idx]-gc_block.values.xyz[idx]; // L20: Update axis current position to target
+      	            parameter_data[idx] -= gc_state.tool_table[ gc_state.modal.tool].xyz[idx];
       	          } else {
       	            parameter_data[idx] = gc_block.values.xyz[idx]; // L2: Update coordinate system axis
       	          }
@@ -567,6 +583,7 @@ uint8_t gc_execute_line(char *line)
       for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
         if (bit_istrue(axis_words,bit(idx)) ) {
           gc_block.values.xyz[idx] = gc_state.position[idx]-coordinate_data[idx]-gc_block.values.xyz[idx];
+          gc_block.values.xyz[idx] -= gc_state.tool_table[ gc_state.modal.tool].xyz[idx];
         } else {
           gc_block.values.xyz[idx] = gc_state.coord_offset[idx];
         }
@@ -590,6 +607,7 @@ uint8_t gc_execute_line(char *line)
               // Apply coordinate offsets based on distance mode.
               if (gc_state.modal.distance == DISTANCE_MODE_ABSOLUTE) {
                 gc_block.values.xyz[idx] += coordinate_data[idx] + gc_state.coord_offset[idx];
+                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool].xyz[idx];
               } else {  // Incremental mode
                 gc_block.values.xyz[idx] += gc_state.position[idx];
               }
@@ -798,7 +816,7 @@ uint8_t gc_execute_line(char *line)
 
   // [0. Non-specific error-checks]: Complete unused value words check, i.e. IJK used when in arc
   // radius mode, or axis words that aren't used in the block.  
-  bit_false(value_words,(bit(WORD_N)|bit(WORD_F)|bit(WORD_S)|bit(WORD_T))); // Remove single-meaning value words. 
+  bit_false(value_words,(bit(WORD_N)|bit(WORD_F)|bit(WORD_S)|bit(WORD_T)|bit(WORD_H))); // Remove single-meaning value words.
   if (axis_explicit) { bit_false(value_words,(bit(WORD_X)|bit(WORD_Y)|bit(WORD_Z))); } // Remove axis words. 
   if (value_words) { FAIL(STATUS_GCODE_UNUSED_WORDS); } // [Unused words]
 
@@ -832,14 +850,14 @@ uint8_t gc_execute_line(char *line)
     
   // [5. Select tool ]:
   if (gc_state.modal.tool != gc_block.values.t) {
-	  gc_state.modal.tool = gc_block.modal.tool;
+	  gc_state.modal.tool = gc_block.values.t;
   }
 
   // [6. Change tool ]:
-  if (gc_state.tool != gc_block.modal.tool) {
+  if (gc_state.modal.tool != gc_block.modal.tool) {
 //    sys.auto_start = false;
     protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
-	gc_state.tool = gc_block.modal.tool;
+	gc_state.modal.tool = gc_block.modal.tool;
   }
 
   // [7. Spindle control ]:
@@ -875,7 +893,10 @@ uint8_t gc_execute_line(char *line)
   // [13. Cutter radius compensation ]: NOT SUPPORTED
 
   // [14. Cutter length compensation ]: NOT SUPPORTED
-  
+  if ( gc_state.modal.tool_comp != gc_block.values.h ) {
+	  gc_state.modal.tool_comp = gc_block.values.h;
+  }
+
   // [15. Coordinate system selection ]:
   if (gc_state.modal.coord_select != gc_block.modal.coord_select) {
     gc_state.modal.coord_select = gc_block.modal.coord_select;

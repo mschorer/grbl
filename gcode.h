@@ -37,15 +37,16 @@
 #define MODAL_GROUP_G3 3 // [G90,G91] Distance mode
 #define MODAL_GROUP_G5 4 // [G93,G94] Feed rate mode
 #define MODAL_GROUP_G6 5 // [G20,G21] Units
-#define MODAL_GROUP_G12 6 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
+#define MODAL_GROUP_G8 6 // [G20,G21] Units
+#define MODAL_GROUP_G12 7 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
 
-#define MODAL_GROUP_M4 7 // [M0,M1,M2,M30] Stopping
-#define MODAL_GROUP_M7 8 // [M3,M4,M5] Spindle turning
-#define MODAL_GROUP_M8 9 // [M7,M8,M9] Coolant control
+#define MODAL_GROUP_M4 8 // [M0,M1,M2,M30] Stopping
+#define MODAL_GROUP_M7 9 // [M3,M4,M5] Spindle turning
+#define MODAL_GROUP_M8 10 // [M7,M8,M9] Coolant control
 
-#define OTHER_INPUT_F 10
-#define OTHER_INPUT_S 11
-#define OTHER_INPUT_T 12
+#define OTHER_INPUT_F 11
+#define OTHER_INPUT_S 12
+#define OTHER_INPUT_T 13
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
@@ -106,21 +107,19 @@
 // N/A: Stores coordinate system value (54-59) to change to.
 
 #define WORD_F  0
-#define WORD_I  1
-#define WORD_J  2
-#define WORD_K  3
-#define WORD_L  4
-#define WORD_N  5
-#define WORD_P  6
-#define WORD_R  7
-#define WORD_S  8
-#define WORD_T  9
-#define WORD_X  10
-#define WORD_Y  11
-#define WORD_Z  12
-
-
-
+#define WORD_H  1
+#define WORD_I  2
+#define WORD_J  3
+#define WORD_K  4
+#define WORD_L  5
+#define WORD_N  6
+#define WORD_P  7
+#define WORD_R  8
+#define WORD_S  9
+#define WORD_T  10
+#define WORD_X  11
+#define WORD_Y  12
+#define WORD_Z  13
 
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
@@ -134,10 +133,12 @@ typedef struct {
   uint8_t coolant;       // {M7,M8,M9}
   uint8_t spindle;       // {M3,M4,M5}
   uint8_t tool;          // {M6}
+  uint8_t tool_comp;     // {G43}
 } gc_modal_t;  
 
 typedef struct {
   float f;         // Feed
+  uint8_t h;		// Tool comp selection
   float ijk[3];    // I,J,K Axis arc offsets
   uint8_t l;       // G10 or canned cycles parameters
   int32_t n;       // Line number
@@ -161,7 +162,8 @@ typedef struct {
   float spindle_speed;             // RPM
   float feed_rate;                 // Millimeters/min
 
-  uint8_t tool;
+//  uint8_t tool;
+//  uint8_t tool_comp;
   gc_tools_t tool_table[ N_TOOL_TABLE];
 
   float position[N_AXIS];          // Where the interpreter considers the tool to be at this point in the code
