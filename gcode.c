@@ -268,13 +268,16 @@ uint8_t gc_execute_line(char *line)
               case 2: case 30: gc_block.modal.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset 
             }
             break;
-          case 3: case 4: case 5: case 6:
+		  case 6:
+		    word_bit = MODAL_GROUP_M6;
+		    gc_block.modal.tool = gc_block.values.t; break;
+		    break;
+          case 3: case 4: case 5:
             word_bit = MODAL_GROUP_M7; 
             switch(int_value) {
               case 3: gc_block.modal.spindle = SPINDLE_ENABLE_CW; break;
               case 4: gc_block.modal.spindle = SPINDLE_ENABLE_CCW; break;
               case 5: gc_block.modal.spindle = SPINDLE_DISABLE; break;
-              case 6: gc_block.modal.tool = gc_block.values.t; break;
             }
             break;            
          #ifdef ENABLE_M7  
@@ -442,7 +445,7 @@ uint8_t gc_execute_line(char *line)
   // bit_false(value_words,bit(WORD_S)); // NOTE: Single-meaning value word. Set at end of error-checking.
     
   // [5. Select tool ]: NOT SUPPORTED. T is negative (done.) Not an integer. Greater than max tool value.
-  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.modal.tool; }
+  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.tool_slot; }
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
   // [5a. Select tool offset]:
@@ -533,14 +536,14 @@ uint8_t gc_execute_line(char *line)
       	      if ( int_value > 0) {
 				  // set tool radius
 				  if (bit_istrue(value_words,bit(WORD_R))) {
-					  gc_state.tool_table[ int_value].r = gc_block.values.r;
+//					  gc_state.tool_table[ int_value].r = gc_block.values.r;
 					  bit_false(value_words,(bit(WORD_R)));
 				  }
 				  // set tool xyz-offsets
 				  for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
 					// Update axes defined only in block. Always in machine coordinates. Can change non-active system.
 					if (bit_istrue(axis_words,bit(idx)) ) {
-						  gc_state.tool_table[ int_value].xyz[ idx] = gc_block.values.xyz[ idx];
+						  parameter_data[idx] = gc_block.values.xyz[ idx];
 					}
 				  }
       	      }
@@ -605,9 +608,9 @@ uint8_t gc_execute_line(char *line)
             // NOTE: G53 is never active with G28/30 since they are in the same modal group.
             if (gc_block.non_modal_command != NON_MODAL_ABSOLUTE_OVERRIDE) {
               // Apply coordinate offsets based on distance mode.
-              if (gc_state.modal.distance == DISTANCE_MODE_ABSOLUTE) {
+              if (gc_block.modal.distance == DISTANCE_MODE_ABSOLUTE) {
                 gc_block.values.xyz[idx] += coordinate_data[idx] + gc_state.coord_offset[idx];
-                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool].xyz[idx];
+                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool_comp].xyz[idx];
               } else {  // Incremental mode
                 gc_block.values.xyz[idx] += gc_state.position[idx];
               }
@@ -849,8 +852,8 @@ uint8_t gc_execute_line(char *line)
   }
     
   // [5. Select tool ]:
-  if (gc_state.modal.tool != gc_block.values.t) {
-	  gc_state.modal.tool = gc_block.values.t;
+  if (gc_state.tool_slot != gc_block.values.t) {
+	  gc_state.tool_slot = gc_block.values.t;
   }
 
   // [6. Change tool ]:
@@ -913,15 +916,21 @@ uint8_t gc_execute_line(char *line)
   // [19. Go to predefined position, Set G10, or Set axis offsets ]:
   switch(gc_block.non_modal_command) {
     case NON_MODAL_SET_COORDINATE_DATA:
+    	int_value = trunc(gc_block.values.p); // Convert p value to int.
+    	switch( gc_block.values.l) {
+			case 1:
+			  gc_state.tool_table[ int_value].r = gc_block.values.r;
+			  memcpy( gc_state.tool_table[ int_value].xyz, parameter_data, sizeof(parameter_data));
+			  break;
+			case 2:
+			case 20:
+			  if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
+			  else { int_value = gc_state.modal.coord_select; } // Index P0 as the active coordinate system
 
-		if ( gc_block.values.l == 2 || gc_block.values.l == 20) {
-		  int_value = trunc(gc_block.values.p); // Convert p value to int.
-		  if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
-		  else { int_value = gc_state.modal.coord_select; } // Index P0 as the active coordinate system
-
-		  settings_write_coord_data(int_value,parameter_data);
-		  // Update system coordinate system if currently active.
-		  if (gc_state.modal.coord_select == int_value) { memcpy(gc_state.coord_system,parameter_data,sizeof(parameter_data)); }
+			  settings_write_coord_data(int_value,parameter_data);
+			  // Update system coordinate system if currently active.
+			  if (gc_state.modal.coord_select == int_value) { memcpy(gc_state.coord_system,parameter_data,sizeof(parameter_data)); }
+			break;
 		}
 // TODO: See if I can clean up this int_value.
       break;

@@ -41,12 +41,13 @@
 #define MODAL_GROUP_G12 7 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
 
 #define MODAL_GROUP_M4 8 // [M0,M1,M2,M30] Stopping
-#define MODAL_GROUP_M7 9 // [M3,M4,M5] Spindle turning
-#define MODAL_GROUP_M8 10 // [M7,M8,M9] Coolant control
+#define MODAL_GROUP_M6 9 // [M3,M4,M5] Spindle turning
+#define MODAL_GROUP_M7 10 // [M3,M4,M5] Spindle turning
+#define MODAL_GROUP_M8 11 // [M7,M8,M9] Coolant control
 
-#define OTHER_INPUT_F 11
-#define OTHER_INPUT_S 12
-#define OTHER_INPUT_T 13
+#define OTHER_INPUT_F 12
+#define OTHER_INPUT_S 13
+#define OTHER_INPUT_T 14
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
@@ -162,7 +163,7 @@ typedef struct {
   float spindle_speed;             // RPM
   float feed_rate;                 // Millimeters/min
 
-//  uint8_t tool;
+  uint8_t tool_slot;
 //  uint8_t tool_comp;
   gc_tools_t tool_table[ N_TOOL_TABLE];
 
