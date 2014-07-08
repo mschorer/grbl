@@ -148,13 +148,13 @@ void printFloat(float n, uint8_t decimal_places)
   unsigned char buf[10]; 
   uint8_t i = 0;
   uint32_t a = (long)n;  
-  buf[ decimal_places] = '.'; // Place decimal point, even if decimal places are zero.
+  buf[decimal_places] = '.'; // Place decimal point, even if decimal places are zero.
   while(a > 0) {
     if (i == decimal_places) { i++; } // Skip decimal point location
     buf[i++] = (a % 10) + '0'; // Get digit
     a /= 10;
   }
-  while (i < decimal_places) {
+  while (i < decimal_places) { 
      buf[i++] = '0'; // Fill in zeros to decimal point for (n < 1)
   }
   if (i == decimal_places) { // Fill in leading zero, if needed.
@@ -167,20 +167,21 @@ void printFloat(float n, uint8_t decimal_places)
     serial_write(buf[i-1]);
 }
 
+
 // Floating value printing handlers for special variables types used in Grbl and are defined
 // in the config.h.
 //  - CoordValue: Handles all position or coordinate values in inches or mm reporting.
 //  - RateValue: Handles feed rate and current velocity in inches or mm reporting.
 //  - SettingValue: Handles all floating point settings values (always in mm.)
-void printFloat_CoordValue(float n) {
-  if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
+void printFloat_CoordValue(float n) { 
+  if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) { 
     printFloat(n*INCH_PER_MM,N_DECIMAL_COORDVALUE_INCH);
   } else {
     printFloat(n,N_DECIMAL_COORDVALUE_MM);
   }
 }
 
-void printFloat_RateValue(float n) {
+void printFloat_RateValue(float n) { 
   if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
     printFloat(n*INCH_PER_MM,N_DECIMAL_RATEVALUE_INCH);
   } else {

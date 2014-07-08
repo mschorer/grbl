@@ -55,7 +55,7 @@ void coolant_stop()
 
 void coolant_run(uint8_t mode)
 {
-	if (sys.state == STATE_CHECK_MODE) { return; }
+  if (sys.state == STATE_CHECK_MODE) { return; }
 
 #if ( COOLANT_CTRL == CTRL_PIN)
 	if (mode == COOLANT_FLOOD_ENABLE) {

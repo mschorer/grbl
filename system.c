@@ -46,9 +46,9 @@ ISR(PINOUT_INT_vect)
     if (bit_isfalse(PINOUT_PIN,bit(PIN_RESET))) {
       mc_reset();
     } else if (bit_isfalse(PINOUT_PIN,bit(PIN_FEED_HOLD))) {
-      bit_true_atomic(sys.execute, (EXEC_FEED_HOLD));
+      bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
     } else if (bit_isfalse(PINOUT_PIN,bit(PIN_CYCLE_START))) {
-      bit_true_atomic(sys.execute, (EXEC_CYCLE_START));
+      bit_true_atomic(sys.execute, EXEC_CYCLE_START);
     } 
   }
 }

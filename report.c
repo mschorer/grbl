@@ -34,6 +34,7 @@
 #include "coolant_control.h"
 #include "planner.h"
 #include "spindle_control.h"
+#include "stepper.h"
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -185,7 +186,7 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (soft limits, bool)\r\n$24=")); print_uint8_base10(bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE));
   printPgmString(PSTR(" (hard limits, bool)\r\n$25=")); print_uint8_base10(bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE));
   printPgmString(PSTR(" (homing cycle, bool)\r\n$26=")); print_uint8_base10(settings.homing_dir_mask);
-  printPgmString(PSTR(" (homing dir invert mask:")); print_uint8_base2(settings.homing_dir_mask);
+  printPgmString(PSTR(" (homing dir invert mask:")); print_uint8_base2(settings.homing_dir_mask);  
   printPgmString(PSTR(")\r\n$27=")); printFloat_SettingValue(settings.homing_feed_rate);
   printPgmString(PSTR(" (homing feed, mm/min)\r\n$28=")); printFloat_SettingValue(settings.homing_seek_rate);
   printPgmString(PSTR(" (homing seek, mm/min)\r\n$29=")); print_uint8_base10(settings.homing_debounce_delay);
@@ -203,11 +204,11 @@ void report_probe_parameters()
   float print_position[N_AXIS];
  
   // Report in terms of machine position.
-  printPgmString(PSTR("[Probe:")); 
+  printPgmString(PSTR("[PRB:")); 
   for (i=0; i< N_AXIS; i++) {
-	print_position[i] = sys.probe_position[i]/settings.steps_per_mm[i];
-	printFloat_CoordValue(print_position[i]);
-	if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
+    print_position[i] = sys.probe_position[i]/settings.steps_per_mm[i];
+    printFloat_CoordValue(print_position[i]);
+    if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
   }  
   printPgmString(PSTR("]\r\n"));
 }
@@ -242,10 +243,9 @@ void report_ngc_parameters()
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     else { printPgmString(PSTR("]\r\n")); }
   } 
-  report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 
-  // Print tool table which are not persistent in memory
-  for (i=0; i < N_TOOL_TABLE; i++) {
+  // Print tool table which are not persisted to memory
+  for (i=1; i < N_TOOL_TABLE; i++) {
 	printPgmString(PSTR("[T"));
 	print_uint8_base10( i);
 	printPgmString(PSTR(" R"));
@@ -257,6 +257,8 @@ void report_ngc_parameters()
 	}
 	printPgmString(PSTR("]\r\n"));
   }
+
+  report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 }
 
 
@@ -394,5 +396,11 @@ void report_realtime_status()
   printInteger(ln);
   #endif
     
+  #ifdef REPORT_REALTIME_RATE
+  // Report realtime rate 
+  printPgmString(PSTR(",F:")); 
+  printFloat_RateValue(st_get_realtime_rate());
+  #endif  
+  
   printPgmString(PSTR(">\r\n"));
 }

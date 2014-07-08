@@ -69,9 +69,7 @@ void spindle_run(uint8_t direction, float rpm)
   
   // Halt or set spindle direction and rpm. 
   if (direction == SPINDLE_DISABLE) {
-
     spindle_stop();
-
   } else {
 
 #if ( SPINDLE_CTRL == CTRL_PIN)

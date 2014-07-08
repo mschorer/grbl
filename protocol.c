@@ -61,7 +61,7 @@ static void protocol_execute_line(char *line)
 
 
 /* 
-  GRBL MAIN LOOP:
+  GRBL PRIMARY LOOP:
 */
 void protocol_main_loop()
 {
@@ -81,9 +81,9 @@ void protocol_main_loop()
     system_execute_startup(line); // Execute startup script.
   }
     
-  // ------------------------------------------------------------------------------  
-  // Main loop! Upon a system abort, this exits back to main() to reset the system. 
-  // ------------------------------------------------------------------------------  
+  // ---------------------------------------------------------------------------------  
+  // Primary loop! Upon a system abort, this exits back to main() to reset the system. 
+  // ---------------------------------------------------------------------------------  
   
   uint8_t iscomment = false;
   uint8_t char_counter = 0;
@@ -92,6 +92,14 @@ void protocol_main_loop()
 
     // Process one line of incoming serial data, as the data becomes available. Performs an
     // initial filtering by removing spaces and comments and capitalizing all letters.
+    
+    // NOTE: While comment, spaces, and block delete(if supported) handling should technically 
+    // be done in the g-code parser, doing it here helps compress the incoming data into Grbl's
+    // line buffer, which is limited in size. The g-code standard actually states a line can't
+    // exceed 256 characters, but the Arduino Uno does not have the memory space for this.
+    // With a better processor, it would be very easy to pull this initial parsing out as a 
+    // seperate task to be shared by the g-code parser and Grbl's system commands.
+    
     while((c = serial_read()) != SERIAL_NO_DATA) {
       if ((c == '\n') || (c == '\r')) { // End of line reached
         line[char_counter] = 0; // Set string termination character.
@@ -290,4 +298,4 @@ void protocol_buffer_synchronize()
 // NOTE: This function is called from the main loop and mc_line() only and executes when one of
 // two conditions exist respectively: There are no more blocks sent (i.e. streaming is finished, 
 // single commands), or the planner buffer is full and ready to go.
-void protocol_auto_cycle_start() { if (sys.auto_start) { bit_true_atomic(sys.execute, (EXEC_CYCLE_START)); } }
+void protocol_auto_cycle_start() { if (sys.auto_start) { bit_true_atomic(sys.execute, EXEC_CYCLE_START); } } 

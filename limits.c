@@ -51,9 +51,9 @@ void limits_init()
   }
   
   #ifdef ENABLE_SOFTWARE_DEBOUNCE
-    MCUSR &= ~(1<<WDRF);
-    WDTCSR |= (1<<WDCE) | (1<<WDE);
-    WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
+  MCUSR &= ~(1<<WDRF);
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+  WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
   #endif
 }
 
@@ -77,38 +77,38 @@ void limits_disable()
 // special pinout for an e-stop, but it is generally recommended to just directly connect
 // your e-stop switch to the Arduino reset pin, since it is the most correct way to do this.
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
-  ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
-  {
-    // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
-    // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
-    // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
-    // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
-    // limit setting if their limits are constantly triggering after a reset and move their axes.
-    if (sys.state != STATE_ALARM) {
-      if (bit_isfalse(sys.execute,EXEC_ALARM)) {
+ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
+{
+  // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
+  // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
+  // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
+  // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
+  // limit setting if their limits are constantly triggering after a reset and move their axes.
+  if (sys.state != STATE_ALARM) { 
+    if (bit_isfalse(sys.execute,EXEC_ALARM)) {
+      mc_reset(); // Initiate system kill.
+      bit_true_atomic(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT)); // Indicate hard limit critical event
+    }
+  }
+}  
+#else // OPTIONAL: Software debounce limit pin routine.
+// Upon limit pin change, enable watchdog timer to create a short delay. 
+ISR(LIMIT_INT_vect) { if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } }
+ISR(WDT_vect) // Watchdog timer ISR
+{
+  WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
+  if (sys.state != STATE_ALARM) {  // Ignore if already in alarm state. 
+    if (bit_isfalse(sys.execute,EXEC_ALARM)) {
+      uint8_t bits = LIMIT_PIN;
+      // Check limit pin state. 
+      if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { bits ^= LIMIT_MASK; }
+      if (bits & LIMIT_MASK) {
         mc_reset(); // Initiate system kill.
-        bit_true_atomic(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT));	// Indicate hard limit critical event
+        bit_true_atomic(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT)); // Indicate hard limit critical event
       }
     }  
   }
-#else // OPTIONAL: Software debounce limit pin routine.
-  // Upon limit pin change, enable watchdog timer to create a short delay. 
-  ISR(LIMIT_INT_vect) { if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } }
-  ISR(WDT_vect) // Watchdog timer ISR
-  {
-    WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
-    if (sys.state != STATE_ALARM) {  // Ignore if already in alarm state. 
-      if (bit_isfalse(sys.execute,EXEC_ALARM)) {
-        uint8_t bits = LIMIT_PIN;
-        // Check limit pin state. 
-        if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { bits ^= LIMIT_MASK; }
-        if (bits & LIMIT_MASK) {
-          mc_reset(); // Initiate system kill.
-          bit_true_atomic(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT)); // Indicate hard limit critical event
-        }
-      }  
-    }
-  }
+}
 #endif
 
 
@@ -239,7 +239,7 @@ void limits_go_home(uint8_t cycle_mask)
   // Initiate pull-off using main motion control routines. 
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
-  bit_true_atomic(sys.execute, (EXEC_CYCLE_START));
+  bit_true_atomic(sys.execute, EXEC_CYCLE_START);
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
   
@@ -255,14 +255,14 @@ void limits_soft_check(float *target)
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) { 
     if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) {  // NOTE: max_travel is stored as negative
-    
+
       if ( idx == Z_AXIS && target[idx] >= ( settings.max_travel[idx] + gc_state.tool_table[ gc_block.modal.tool].xyz[Z_AXIS])) continue;
 
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 
       // workspace volume so just come to a controlled stop so position is not lost. When complete
       // enter alarm mode.
       if (sys.state == STATE_CYCLE) {
-        bit_true_atomic(sys.execute, (EXEC_FEED_HOLD));
+        bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
         do {
           protocol_execute_runtime();
           if (sys.abort) { return; }
@@ -270,7 +270,7 @@ void limits_soft_check(float *target)
       }
       
       mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.
-      bit_true_atomic(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT));
+      bit_true_atomic(sys.execute, (EXEC_ALARM | EXEC_CRIT_EVENT)); // Indicate soft limit critical event
       protocol_execute_runtime(); // Execute to enter critical event loop and system abort
       return;
     

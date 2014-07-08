@@ -96,7 +96,8 @@ void serial_write(uint8_t data) {
 
 
 // Data Register Empty Interrupt handler
-ISR(SERIAL_UDRE) {
+ISR(SERIAL_UDRE)
+{
   uint8_t tail = tx_buffer_tail; // Temporary tx_buffer_tail (to optimize for volatile)
   
   #ifdef ENABLE_XONXOFF
@@ -148,16 +149,17 @@ uint8_t serial_read()
 }
 
 
-ISR(SERIAL_RX) {
+ISR(SERIAL_RX)
+{
   uint8_t data = UDR0;
   uint8_t next_head;
   
   // Pick off runtime command characters directly from the serial stream. These characters are
   // not passed into the buffer, but these set system state flag bits for runtime execution.
   switch (data) {
-    case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, (EXEC_STATUS_REPORT)); break; // Set as true
-    case CMD_CYCLE_START:   bit_true_atomic(sys.execute, (EXEC_CYCLE_START)); break; // Set as true
-    case CMD_FEED_HOLD:     bit_true_atomic(sys.execute, (EXEC_FEED_HOLD)); break; // Set as true
+    case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, EXEC_STATUS_REPORT); break; // Set as true
+    case CMD_CYCLE_START:   bit_true_atomic(sys.execute, EXEC_CYCLE_START); break; // Set as true
+    case CMD_FEED_HOLD:     bit_true_atomic(sys.execute, EXEC_FEED_HOLD); break; // Set as true
     case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
     default: // Write character to buffer    
       next_head = rx_buffer_head + 1;
@@ -176,6 +178,7 @@ ISR(SERIAL_RX) {
         #endif
         
       }
+      //TODO: else alarm on overflow?
   }
 }
 
