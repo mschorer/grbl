@@ -95,9 +95,11 @@ void spindle_run(uint8_t direction, float rpm)
 	  SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
-	uint8_t rpm_100 = floor( rpm / SPINDLE_RPM_SCALE);
+	uint8_t rpm_val = min( SPINDLE_RPM_STEPS, floor( rpm / SPINDLE_RPM_SCALE));
+//	if ( rpm > SPINDLE_RPM_MAX) rpm_val = SPINDLE_RPM_STEPS;
+//	else rpm_val = floor( rpm / SPINDLE_RPM_SCALE);
 
-	TWI_buffer_out[0] = rpm_100;
+	TWI_buffer_out[0] = rpm_val;
 	TWI_master_start_write( 0x5c, 1);
 #endif
   }
