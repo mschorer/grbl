@@ -24,6 +24,7 @@
 
 #include "system.h"
 #include "settings.h"
+#include "tool_changer.h"
 
 // Define modal group internal numbers for checking multiple command violations and tracking the 
 // type of command that is called in the block. A modal group is a group of g-code commands that are
@@ -155,12 +156,6 @@ typedef struct {
   uint8_t t;	// Tool selection
   float xyz[3];    // X,Y,Z Translational axes
 } gc_values_t;
-
-typedef struct {
-  float r;         // tool radius
-  float xyz[3];    // tool offsets for X,Y,Z axes
-} gc_tools_t;
-
 
 typedef struct {
   gc_modal_t modal;

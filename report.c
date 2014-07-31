@@ -201,13 +201,13 @@ void report_grbl_settings() {
 void report_probe_parameters()
 {
   uint8_t i;
-  float print_position[N_AXIS];
+  float print_position;
  
   // Report in terms of machine position.
   printPgmString(PSTR("[PRB:")); 
   for (i=0; i< N_AXIS; i++) {
-    print_position[i] = sys.probe_position[i]/settings.steps_per_mm[i];
-    printFloat_CoordValue(print_position[i]);
+    print_position = sys.probe_position[i]/settings.steps_per_mm[i];
+    printFloat_CoordValue(print_position);
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
   }  
   printPgmString(PSTR("]\r\n"));
@@ -339,8 +339,13 @@ void report_build_info(char *line)
   printString(line);
   printPgmString(PSTR("]\r\n"));
 }
-
-
+/*
+int freeRam () {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+*/
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram 
  // and the actual location of the CNC machine. Users may change the following function to their
  // specific needs, but the desired real-time data report must be as short as possible. This is
@@ -400,7 +405,10 @@ void report_realtime_status()
   // Report realtime rate 
   printPgmString(PSTR(",F:")); 
   printFloat_RateValue(st_get_realtime_rate());
-  #endif  
-  
+  #endif
+/*
+  printPgmString(PSTR(",RAM:"));
+  printInteger( freeRam());
+*/
   printPgmString(PSTR(">\r\n"));
 }

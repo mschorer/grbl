@@ -23,9 +23,10 @@
 #define settings_h
 
 #include "system.h"
+#include "tool_changer.h"
 
 #define GRBL_VERSION "0.9f"
-#define GRBL_VERSION_BUILD "20140708.3"
+#define GRBL_VERSION_BUILD "20140731.2"
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
@@ -45,6 +46,7 @@
 // the startup script. The lower half contains the global settings and space for future 
 // developments.
 #define EEPROM_ADDR_GLOBAL 1
+#define EEPROM_ADDR_TOOLS 384
 #define EEPROM_ADDR_PARAMETERS 512
 #define EEPROM_ADDR_STARTUP_BLOCK 768
 #define EEPROM_ADDR_BUILD_INFO 992
@@ -102,5 +104,8 @@ void settings_write_coord_data(uint8_t coord_select, float *coord_data);
 
 // Reads selected coordinate data from EEPROM
 uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data);
+
+uint8_t settings_read_tool_data(uint8_t tool_select, gc_tools_t *tool_data);
+void settings_write_tool_data(uint8_t tool_select, gc_tools_t *tool_data);
 
 #endif

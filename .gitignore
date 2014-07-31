@@ -5,3 +5,4 @@
 *.d
 /Release
 .settings/
+/memory.txt

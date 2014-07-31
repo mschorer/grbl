@@ -25,6 +25,7 @@
 #include "protocol.h"
 #include "report.h"
 #include "limits.h"
+#include "gcode.h"
 
 settings_t settings;
 
@@ -50,6 +51,13 @@ void settings_write_coord_data(uint8_t coord_select, float *coord_data)
   uint16_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
   memcpy_to_eeprom_with_checksum(addr,(char*)coord_data, sizeof(float)*N_AXIS);
 }  
+
+// Method to store tool parameters into EEPROM
+void settings_write_tool_data(uint8_t tool_select, gc_tools_t *tool_data)
+{
+  uint16_t addr = tool_select*(sizeof(gc_tools_t)+1) + EEPROM_ADDR_TOOLS;
+  memcpy_to_eeprom_with_checksum(addr,(char*)tool_data, sizeof(gc_tools_t));
+}
 
 
 // Method to store Grbl global settings struct and version number into EEPROM
@@ -139,6 +147,21 @@ uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data)
     return(true);
   }
 }  
+
+
+// Read selected tool data from EEPROM. Updates pointed coord_data value.
+uint8_t settings_read_tool_data(uint8_t tool_select, gc_tools_t *tool_data)
+{
+  uint16_t addr = tool_select*(sizeof(gc_tools_t)+1) + EEPROM_ADDR_TOOLS;
+  if (!(memcpy_from_eeprom_with_checksum((char*)tool_data, addr, sizeof(gc_tools_t)))) {
+    // Reset with default zero vector
+    clear_vector(tool_data);
+    settings_write_tool_data(tool_select,tool_data);
+    return(false);
+  } else {
+    return(true);
+  }
+}
 
 
 // Reads Grbl global settings struct from EEPROM.

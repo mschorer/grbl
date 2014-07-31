@@ -47,12 +47,17 @@ parser_block_t gc_block;
 
 void gc_init() 
 {
+  uint8_t tool;
   memset(&gc_state, 0, sizeof(gc_state));
   
   // Load default G54 coordinate system.
   if (!(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) { 
     report_status_message(STATUS_SETTING_READ_FAIL); 
-  } 
+  }
+
+  for( tool=1; tool < N_TOOL_TABLE; tool++) {
+	  settings_read_tool_data( tool, &gc_state.tool_table[tool]);
+  }
 }
 
 
@@ -442,11 +447,19 @@ uint8_t gc_execute_line(char *line)
   // bit_false(value_words,bit(WORD_S)); // NOTE: Single-meaning value word. Set at end of error-checking.
     
   // [5. Select tool ]:  T is negative (done.) Not an integer. Greater than max tool value.
-  if (bit_isfalse(value_words,bit(WORD_T))) { gc_block.values.t = gc_state.tool_slot; }
+  if (bit_istrue(value_words,bit(WORD_T))) {
+	  if (gc_block.values.t >= N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
+  } else {
+	  gc_block.values.t = gc_state.tool_slot;
+  }
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
   // [5a. Select tool offset]:
-  if (bit_isfalse(value_words,bit(WORD_H))) { gc_block.values.h = gc_state.modal.tool_comp; }
+  if (bit_istrue(value_words,bit(WORD_H))) {
+	  if (gc_block.values.h > N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
+  } else {
+	  gc_block.values.h = gc_state.modal.tool_comp;
+  }
 
   // [6. Change tool ]: N/A
   // [7. Spindle control ]: N/A
@@ -525,7 +538,7 @@ uint8_t gc_execute_line(char *line)
       // [G10 Errors]: L missing and is not 2 or 20. P word missing. (Negative P value done.)
       // [G10 L2 Errors]: R word NOT SUPPORTED. P value not 0 to nCoordSys(max 9). Axis words missing.
       // [G10 L20 Errors]: P must be 0 to nCoordSys(max 9). Axis words missing.
-      if (!axis_words) { FAIL(STATUS_GCODE_NO_AXIS_WORDS) }; // [No axis words]
+      if (!axis_words && bit_isfalse(value_words,(1<<WORD_R)) ) { FAIL(STATUS_GCODE_NO_AXIS_WORDS) }; // [No axis words]
       if (bit_isfalse(value_words,((1<<WORD_P)|(1<<WORD_L)))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P/L word missing]
       int_value = trunc(gc_block.values.p); // Convert p value to int.
 
@@ -540,15 +553,16 @@ uint8_t gc_execute_line(char *line)
 
       	      if ( int_value > 0) {
 				  // set tool radius
-//				  if (bit_istrue(value_words,bit(WORD_R))) {
-//					  gc_state.tool_table[ int_value].r = gc_block.values.r;
+				  if (bit_isfalse(value_words,bit(WORD_R))) {
+					  gc_block.values.r = gc_state.tool_table[ int_value].r;
+				  } else {
 					  bit_false(value_words,(bit(WORD_R)));
-//				  }
+				  }
 				  // set tool xyz-offsets
 				  for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
 					// Update axes defined only in block. Always in machine coordinates. Can change non-active system.
-					if (bit_istrue(axis_words,bit(idx)) ) {
-						  parameter_data[idx] = gc_block.values.xyz[ idx];
+					if ( bit_isfalse(axis_words,bit(idx)) ) {
+						gc_block.values.xyz[ idx] = gc_state.tool_table[ int_value].xyz[idx];
 					}
 				  }
       	      }
@@ -936,7 +950,9 @@ uint8_t gc_execute_line(char *line)
     	switch( gc_block.values.l) {
 			case 1:
 			  gc_state.tool_table[ int_value].r = gc_block.values.r;
-			  memcpy( gc_state.tool_table[ int_value].xyz, parameter_data, sizeof(parameter_data));
+			  memcpy( gc_state.tool_table[ int_value].xyz, gc_block.values.xyz, sizeof( gc_block.values.xyz));
+
+			  settings_write_tool_data( int_value, &gc_state.tool_table[ int_value]);
 			  break;
 			case 2:
 			case 20:
@@ -1062,9 +1078,8 @@ uint8_t gc_execute_line(char *line)
    group 0 = {G92.2, G92.3} (Non modal: Cancel and re-enable G92 offsets)
    group 1 = {G81 - G89} (Motion modes: Canned cycles)
    group 4 = {M1} (Optional stop, ignored)
-   group 6 = {M6} (Tool change)
    group 7 = {G40, G41, G42} cutter radius compensation
-   group 8 = {G43} tool length offset (But G43.1/G94 IS SUPPORTED)
+   group 8 = {G43.1} tool length offset (But G43Hx/G94 IS SUPPORTED)
    group 8 = {*M7} enable mist coolant
    group 9 = {M48, M49} enable/disable feed and speed override switches
    group 10 = {G98, G99} return mode canned cycles

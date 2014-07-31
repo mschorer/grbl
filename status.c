@@ -24,7 +24,7 @@
 #include "settings.h"
 #include "gcode.h"
 
-volatile uint8_t status_state;
+//volatile uint8_t status_state;
 volatile uint8_t status_led;
 volatile uint8_t status_ticks;
 
@@ -44,7 +44,7 @@ void status_init()
 	TCCR2B  = (1<<CS22) | (1<<CS21) | (1<<CS20);	//0x07;			//Timer2 Control Reg B: Timer Prescaler set to 1024
 
 	status_led = 0;
-	status_state = PROGRAM_FLOW_COMPLETED;
+//	status_state = PROGRAM_FLOW_COMPLETED;
 	status_ticks = 62;
 }
 
