@@ -1,12 +1,12 @@
 #Grbl
 
-- changes against 0.9g
+merge grbl 0.9g
 
-These are my changes to grbl-dev:
-
+recent changes:
 - class-out tool_changer
-- fix partially setting tool-parameters
+- fix setting tool-parameters
 
+features:
 - support "G10 L1 Px Rr Xx Yy Zz" to set tool offsets for tools 1-4
 - support "G43 Hx" to enable tool compensation for xyz (radius not supported)
 - support Tx for tool carousel select
