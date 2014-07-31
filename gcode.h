@@ -129,12 +129,12 @@
 
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
-  uint8_t motion;        // {G0,G1,G2,G3,G80}
+  uint8_t motion;        // {G0,G1,G2,G3,G38.2,G80}
   uint8_t feed_rate;     // {G93,G94}
   uint8_t units;         // {G20,G21}
   uint8_t distance;      // {G90,G91}
   uint8_t plane_select;  // {G17,G18,G19}
-  uint8_t tool_length;   // {G43.1,G49}
+//  uint8_t tool_length;   // {G43.1,G49}
   uint8_t coord_select;  // {G54,G55,G56,G57,G58,G59}
   uint8_t program_flow;  // {M0,M1,M2,M30}
   uint8_t coolant;       // {M7,M8,M9}
@@ -153,7 +153,7 @@ typedef struct {
   // float q;      // G82 peck drilling
   float r;         // Arc radius
   float s;         // Spindle speed
-  uint8_t t;	// Tool selection
+  uint8_t t;       // Tool selection
   float xyz[3];    // X,Y,Z Translational axes
 } gc_values_t;
 

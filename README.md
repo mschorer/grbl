@@ -1,11 +1,13 @@
 #Grbl
 
-- changes against 0.9f
+- changes against 0.9g
 
 These are my changes to grbl-dev:
 
-- remove dynamic tool length g43.1 support
-- support "G10 L1 Px" to set tool offsets for tools 1-4
+- class-out tool_changer
+- fix partially setting tool-parameters
+
+- support "G10 L1 Px Rr Xx Yy Zz" to set tool offsets for tools 1-4
 - support "G43 Hx" to enable tool compensation for xyz (radius not supported)
 - support Tx for tool carousel select
 - support M6 for tool change, program pauses and requires user to "continue" via button or console

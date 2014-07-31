@@ -27,7 +27,6 @@ typedef struct {
   float xyz[3];    // tool offsets for X,Y,Z axes
 } gc_tools_t;
 
-
 // Initialize tool changer
 void tools_init();
 
