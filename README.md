@@ -1,6 +1,31 @@
 #Grbl - An embedded g-code interpreter and motion-controller for the Arduino/AVR328 microcontroller
 ------------
 
+recent changes:
+- class-out tool_changer
+- fix setting tool-parameters
+
+features:
+- support "G10 L1 Px Rr Xx Yy Zz" to set tool offsets for tools 1-4
+- support "G43 Hx" to enable tool compensation for xyz (radius not supported)
+- support Tx for tool carousel select
+- support M6 for tool change, program pauses and requires user to "continue" via button or console
+- modify homing to move to 0,0,0
+
+- add i2c capabilities, interrupt-driven, state machine based code, no busy waiting
+- add status display via LED blink codes (details see code)
+
+status blink codes (ticks ON/OFF, 62ticks/sec):
+- STATE_IDLE:       2/60
+- STATE_QUEUED:     22/40
+- STATE_HOLD:       42/20
+- STATE_CYCLE:      62/62
+- STATE_HOMING:     24/90
+- STATE_ALARM:      16/16
+- STATE_CHECK_MODE:	124/120
+
+-------------
+
 Grbl is a no-compromise, high performance, low cost alternative to parallel-port-based motion control for CNC milling. It will run on a vanilla Arduino (Duemillanove/Uno) as long as it sports an Atmega 328. 
 
 The controller is written in highly optimized C utilizing every clever feature of the AVR-chips to achieve precise timing and asynchronous operation. It is able to maintain up to 30kHz of stable, jitter free control pulses.
@@ -60,4 +85,3 @@ List of Supported G-Codes in Grbl v0.9
 Grbl is an open-source project and fueled by the free-time of our intrepid administrators and altruistic users. If you'd like to donate, all proceeds will be used to help fund supporting hardware and testing equipment. Thank you!
 
 [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=EBQWAWQAAT878)
-

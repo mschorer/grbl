@@ -225,20 +225,20 @@ void limits_go_home(uint8_t cycle_mask)
     // do not move them.
     // NOTE: settings.max_travel[] is stored as a negative value.
     if (cycle_mask & bit(idx)) {
-    
-      #ifdef HOMING_FORCE_SET_ORIGIN
-        sys.position[idx] = 0;  // Set axis homed location as axis origin
-        target[idx] = settings.homing_pulloff;  
-        if ( bit_isfalse(settings.homing_dir_mask,bit(idx)) ) { target[idx] = -target[idx]; }     
-      #else
-        if ( bit_istrue(settings.homing_dir_mask,bit(idx)) ) {
-          target[idx] = settings.homing_pulloff+settings.max_travel[idx];
-          sys.position[idx] = lround(settings.max_travel[idx]*settings.steps_per_mm[idx]);
-        } else {
-          target[idx] = -settings.homing_pulloff;
-          sys.position[idx] = 0;
-        }
-      #endif
+
+#ifdef HOMING_FORCE_SET_ORIGIN
+	  sys.position[idx] = 0;  // Set axis homed location as axis origin
+	  target[idx] = settings.homing_pulloff;
+	  if ( bit_isfalse(settings.homing_dir_mask,bit(idx)) ) { target[idx] = -target[idx]; }
+#else
+	  if ( bit_istrue(settings.homing_dir_mask,bit(idx)) ) {
+		target[idx] = settings.max_travel[idx];
+		sys.position[idx] = lround((settings.max_travel[idx]+settings.homing_pulloff)*settings.steps_per_mm[idx]);
+	  } else {
+		target[idx] = 0;
+		sys.position[idx] = settings.homing_pulloff*settings.steps_per_mm[idx];
+	  }
+#endif
       
     } else { // Non-active cycle axis. Set target to not move during pull-off. 
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
@@ -272,19 +272,20 @@ void limits_soft_check(float *target)
   uint8_t soft_limit_error = false;
   for (idx=0; idx<N_AXIS; idx++) {
    
-    #ifdef HOMING_FORCE_SET_ORIGIN
-      // When homing forced set origin is enabled, soft limits checks need to account for directionality.
-      // NOTE: max_travel is stored as negative
-      if (bit_istrue(settings.homing_dir_mask,bit(idx))) {
-        if (target[idx] < 0 || target[idx] > -settings.max_travel[idx]) { soft_limit_error = true; }
-      } else {
-        if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) { soft_limit_error = true; }
-      }
-    #else  
-      // NOTE: max_travel is stored as negative
-      if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) { soft_limit_error = true; }
-    #endif
-    
+	#ifdef HOMING_FORCE_SET_ORIGIN
+	  // When homing forced set origin is enabled, soft limits checks need to account for directionality.
+	  // NOTE: max_travel is stored as negative
+	  if (bit_istrue(settings.homing_dir_mask,bit(idx))) {
+		if (target[idx] < 0 || target[idx] > -settings.max_travel[idx]) { soft_limit_error = true; }
+	  } else {
+		if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) { soft_limit_error = true; }
+		if ( target[idx] < ( settings.max_travel[idx] + gc_state.tool_table[ gc_block.modal.tool].xyz[idx])) { soft_limit_error = true; }
+	  }
+	#else
+	  // NOTE: max_travel is stored as negative
+	  if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) { soft_limit_error = true; }
+	#endif
+
     if (soft_limit_error) {
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 
       // workspace volume so just come to a controlled stop so position is not lost. When complete

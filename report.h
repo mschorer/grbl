@@ -50,8 +50,10 @@
 #define STATUS_GCODE_INVALID_TARGET 33
 #define STATUS_GCODE_ARC_RADIUS_ERROR 34
 #define STATUS_GCODE_NO_OFFSETS_IN_PLANE 35
-#define STATUS_GCODE_UNUSED_WORDS 36
-#define STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR 37
+#define STATUS_GCODE_PROBE_TRIGGERED 36
+#define STATUS_GCODE_UNUSED_WORDS 37
+#define STATUS_GCODE_G43_DYNAMIC_AXIS_ERROR 38
+#define STATUS_GCODE_UNSUPPORTED_TOOL 39
 
 // Define Grbl alarm codes. Less than zero to distinguish alarm error from status error.
 #define ALARM_LIMIT_ERROR -1
@@ -100,5 +102,7 @@ void report_startup_line(uint8_t n, char *line);
 
 // Prints build info and user info
 void report_build_info(char *line);
+
+//int freeRam();
 
 #endif

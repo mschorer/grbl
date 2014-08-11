@@ -27,9 +27,11 @@
 #ifndef settings_h
 #define settings_h
 
+#include "system.h"
+#include "tool_changer.h"
 
 #define GRBL_VERSION "0.9g"
-#define GRBL_VERSION_BUILD "20140805"
+#define GRBL_VERSION_BUILD "20140811.0"
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
@@ -55,10 +57,11 @@
 // NOTE: The Atmega328p has 1KB EEPROM. The upper half is reserved for parameters and
 // the startup script. The lower half contains the global settings and space for future 
 // developments.
-#define EEPROM_ADDR_GLOBAL         1U
-#define EEPROM_ADDR_PARAMETERS     512U
-#define EEPROM_ADDR_STARTUP_BLOCK  768U
-#define EEPROM_ADDR_BUILD_INFO     942U
+#define EEPROM_ADDR_GLOBAL			1U
+#define EEPROM_ADDR_TOOLS			384U
+#define EEPROM_ADDR_PARAMETERS		512U
+#define EEPROM_ADDR_STARTUP_BLOCK	768U
+#define EEPROM_ADDR_BUILD_INFO		942U
 
 // Define EEPROM address indexing for coordinate parameters
 #define N_COORDINATE_SYSTEM 6  // Number of supported work coordinate systems (from index 1)
@@ -133,5 +136,7 @@ uint8_t get_direction_pin_mask(uint8_t i);
 // Returns the limit pin mask according to Grbl's internal axis numbering
 uint8_t get_limit_pin_mask(uint8_t i);
 
+uint8_t settings_read_tool_data(uint8_t tool_select, gc_tools_t *tool_data);
+void settings_write_tool_data(uint8_t tool_select, gc_tools_t *tool_data);
 
 #endif

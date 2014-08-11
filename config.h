@@ -111,6 +111,11 @@
 // goes from 18 or 16 to make room for the additional line number data in the plan_block_t struct
 // #define USE_LINE_NUMBERS // Disabled by default. Uncomment to enable.
 
+// Allows GRBL to report the real-time feed rate.  Enabling this means that GRBL will be reporting more
+// data with each status update.
+// NOTE: This is experimental and doesn't quite work 100%. Maybe fixed or refactored later.
+// #define REPORT_REALTIME_RATE // Disabled by default. Uncomment to enable.
+
 // Allows GRBL to report the real-time feed rate.  Enabling this means that GRBL will be reporting more 
 // data with each status update.
 // NOTE: This is experimental and doesn't quite work 100%. Maybe fixed or refactored later.
@@ -124,7 +129,18 @@
 // Enables a second coolant control pin via the mist coolant g-code command M7 on the Arduino Uno
 // analog pin 5. Only use this option if you require a second coolant control pin.
 // NOTE: The M8 flood coolant control pin on analog pin 4 will still be functional regardless.
-// #define ENABLE_M7 // Disabled by default. Uncomment to enable.
+#define ENABLE_M7 // Mist coolant disabled by default. See config.h to enable/disable.
+
+#define CTRL_OFF 0
+#define CTRL_PIN 1
+#define CTRL_I2C 2
+
+#define SPINDLE_RPM_MAX  8500		// ~ 12v * 710rpm/V
+#define SPINDLE_RPM_STEPS 125
+#define SPINDLE_RPM_SCALE 68
+
+#define COOLANT_CTRL CTRL_I2C
+#define SPINDLE_CTRL CTRL_I2C
 
 // ---------------------------------------------------------------------------------------
 // ADVANCED CONFIGURATION OPTIONS:
@@ -206,7 +222,7 @@
 // available RAM, like when re-compiling for a Mega or Sanguino. Or decrease if the Arduino
 // begins to crash due to the lack of available RAM or if the CPU is having trouble keeping
 // up with planning new incoming motions as they are executed. 
-// #define BLOCK_BUFFER_SIZE 18  // Uncomment to override default in planner.h.
+#define BLOCK_BUFFER_SIZE 15  // Uncomment to override default in planner.h.
 
 // Governs the size of the intermediary step segment buffer between the step execution algorithm
 // and the planner blocks. Each segment is set of steps executed at a constant velocity over a

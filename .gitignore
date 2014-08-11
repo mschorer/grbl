@@ -3,3 +3,6 @@
 *.elf
 *.DS_Store
 *.d
+/Release
+.settings/
+/memory.txt

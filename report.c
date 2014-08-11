@@ -269,6 +269,21 @@ void report_ngc_parameters()
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     else { printPgmString(PSTR("]\r\n")); }
   } 
+
+  // Print tool table
+  for (i=1; i < N_TOOL_TABLE; i++) {
+	printPgmString(PSTR("[T"));
+	print_uint8_base10( i);
+	printPgmString(PSTR(" R"));
+	printFloat_CoordValue( gc_state.tool_table[i].r);
+	printPgmString(PSTR(" XYZ "));
+	for ( coord_select=0; coord_select<N_AXIS; coord_select++) {
+		printFloat_CoordValue(gc_state.tool_table[i].xyz[ coord_select]);
+		if (coord_select < (N_AXIS-1)) { printPgmString(PSTR(",")); }
+	}
+	printPgmString(PSTR("]\r\n"));
+  }
+
   printPgmString(PSTR("[TLO:")); // Print tool length offset value
   printFloat_CoordValue(gc_state.tool_length_offset);
   printPgmString(PSTR("]\r\n"));
@@ -326,7 +341,10 @@ void report_gcode_modes()
   }
   
   printPgmString(PSTR(" T"));
-  print_uint8_base10(gc_state.tool);
+  print_uint8_base10(gc_state.tool_slot);
+
+  printPgmString(PSTR(" H"));
+  print_uint8_base10(gc_state.modal.tool_comp);
   
   printPgmString(PSTR(" F"));
   printFloat_RateValue(gc_state.feed_rate);
@@ -433,6 +451,11 @@ void report_realtime_status()
     printPgmString(PSTR(",F:")); 
     printFloat_RateValue(st_get_realtime_rate());
   #endif    
+
+/*
+  printPgmString(PSTR(",RAM:"));
+  printInteger( freeFreeMemory());
+*/
   
   printPgmString(PSTR(">\r\n"));
 }

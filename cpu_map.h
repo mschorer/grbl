@@ -75,6 +75,12 @@
   #define LIMIT_INT_vect   PCINT0_vect 
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
 
+  // status display LED
+  #define STATUS_LED_DDR   DDRB
+  #define STATUS_LED_PORT  PORTB
+  #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+
+#if ( SPINDLE_CTRL == CTRL_PIN)
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR    DDRB
   #define SPINDLE_ENABLE_PORT   PORTB
@@ -86,7 +92,9 @@
   #define SPINDLE_DIRECTION_DDR   DDRB
   #define SPINDLE_DIRECTION_PORT  PORTB
   #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+#endif
 
+#if ( COOLANT_CTRL == CTRL_PIN)
   // Define flood and mist coolant enable output pins.
   // NOTE: Uno analog pins 4 and 5 are reserved for an i2c interface, and may be installed at
   // a later date if flash and memory space allows.
@@ -98,6 +106,7 @@
     #define COOLANT_MIST_PORT  PORTC
     #define COOLANT_MIST_BIT   4 // Uno Analog Pin 4
   #endif  
+#endif
 
   // Define user-control pinouts (cycle start, reset, feed hold) input pins.
   // NOTE: All pinouts pins must be on the same port and not on a port with other input pins (limits).
@@ -113,13 +122,13 @@
   #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
   
   // Define probe switch input pin.
-  #define PROBE_DDR       DDRC
-  #define PROBE_PIN       PINC
-  #define PROBE_PORT      PORTC
-  #define PROBE_BIT       5  // Uno Analog Pin 5
+  #define PROBE_DDR       DDRB
+  #define PROBE_PIN       PINB
+  #define PROBE_PORT      PORTB
+  #define PROBE_BIT       4  // Uno Digital Pin 12
   #define PROBE_MASK      (1<<PROBE_BIT)
 
-  
+#if ( COOLANT_CTRL == CTRL_PIN)
   #ifdef VARIABLE_SPINDLE
     // Advanced Configuration Below You should not need to touch these variables
     #define TCCRA_REGISTER	 TCCR2A
@@ -137,7 +146,7 @@
     #define SPINDLE_PWM_PORT  SPINDLE_ENABLE_PORT
     #define SPINDLE_PWM_BIT	  SPINDLE_ENABLE_BIT // Shared with SPINDLE_ENABLE.
   #endif // End of VARIABLE_SPINDLE
-
+#endif
 #endif
 
 //----------------------------------------------------------------------------------------
