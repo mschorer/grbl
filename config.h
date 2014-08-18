@@ -116,11 +116,6 @@
 // NOTE: This is experimental and doesn't quite work 100%. Maybe fixed or refactored later.
 // #define REPORT_REALTIME_RATE // Disabled by default. Uncomment to enable.
 
-// Allows GRBL to report the real-time feed rate.  Enabling this means that GRBL will be reporting more 
-// data with each status update.
-// NOTE: This is experimental and doesn't quite work 100%. Maybe fixed or refactored later.
-// #define REPORT_REALTIME_RATE // Disabled by default. Uncomment to enable.
-
 // Upon a successful probe cycle, this option provides immediately feedback of the probe coordinates
 // through an automatically generated message. If disabled, users can still access the last probe
 // coordinates through Grbl '$#' print parameters.

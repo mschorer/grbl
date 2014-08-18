@@ -1,8 +1,8 @@
 /*
-  limits.h - code pertaining to limit-switches and performing the homing cycle
+  status.h - Header for status level commands and real-time processes
   Part of Grbl v0.9
 
-  Copyright (c) 2012-2014 Sungeun K. Jeon  
+  Copyright (c) 2014 Sungeun K. Jeon  
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,25 +17,26 @@
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
-/* 
-  This file is based on work from Grbl v0.8, distributed under the 
-  terms of the MIT-license. See COPYING for more details.  
-    Copyright (c) 2009-2011 Simen Svale Skogsrud
-*/  
 
-#ifndef limits_h
-#define limits_h 
+#ifndef status_h
+#define status_h
 
+// Define system header files and standard libraries used by Grbl
+#include <inttypes.h>    
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 
-// Initialize the limits module
-void limits_init();
+// Define Grbl configuration and shared header files
+#include "config.h"
+#include "cpu_map.h"
+#include "gcode.h"
 
-void limits_disable();
+// Initialize the serial protocol
+void status_init();
 
-// Perform one portion of the homing cycle based on the input settings.
-void limits_go_home(uint8_t cycle_mask);
-
-// Check for soft limit violations
-void limits_soft_check(float *target);
+// Executes an internal status command, defined as a string starting with a '$'
+void status_set( uint8_t status);
 
 #endif

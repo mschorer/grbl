@@ -1,8 +1,9 @@
 /*
-  limits.h - code pertaining to limit-switches and performing the homing cycle
+  tool_changer.h - tool control methods
   Part of Grbl v0.9
 
-  Copyright (c) 2012-2014 Sungeun K. Jeon  
+  Copyright (c) 2012-2014 Sungeun K. Jeon
+  Copyright (c) 2009-2011 Simen Svale Skogsrud
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,25 +18,24 @@
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
-/* 
-  This file is based on work from Grbl v0.8, distributed under the 
-  terms of the MIT-license. See COPYING for more details.  
-    Copyright (c) 2009-2011 Simen Svale Skogsrud
-*/  
 
-#ifndef limits_h
-#define limits_h 
+#ifndef tool_changer_h
+#define tool_changer_h
 
+#define N_TOOL_TABLE 5  // Number of supported tools + 1, #0 is used as a zero-offset tool
 
-// Initialize the limits module
-void limits_init();
+typedef struct {
+  float r;         // tool radius
+  float xyz[3];    // tool offsets for X,Y,Z axes
+} gc_tools_t;
 
-void limits_disable();
+// Initialize tool changer
+void tools_init();
 
-// Perform one portion of the homing cycle based on the input settings.
-void limits_go_home(uint8_t cycle_mask);
+// select tools
+void tools_select(uint8_t index);
 
-// Check for soft limit violations
-void limits_soft_check(float *target);
+// perform change
+void tools_change();
 
 #endif
