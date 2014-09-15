@@ -19,7 +19,7 @@
 #define TWI_data_received_ack_returned 0x50
 #define TWI_data_received_nack_returned 0x58
 
-#define TWI_BUFFER_MAX 10
+#define TWI_BUFFER_MAX 32
 volatile uint8_t TWI_buffer_in[TWI_BUFFER_MAX];
 volatile uint8_t TWI_buffer_out[TWI_BUFFER_MAX];
 volatile uint8_t TWI_target_slave_addr;

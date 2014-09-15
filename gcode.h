@@ -98,6 +98,10 @@
 #define UNITS_MODE_MM 0 // G21 (Default: Must be zero)
 #define UNITS_MODE_INCHES 1 // G20
 
+// Modal Group M6: Tool changer
+#define TOOL_KEEP 0
+#define TOOL_CHANGE 1
+
 // Modal Group M7: Spindle control
 #define SPINDLE_DISABLE 0 // M5 (Default: Must be zero)
 #define SPINDLE_ENABLE_CW 1 // M3
@@ -142,8 +146,8 @@ typedef struct {
   uint8_t program_flow;  // {M0,M1,M2,M30}
   uint8_t coolant;       // {M7,M8,M9}
   uint8_t spindle;       // {M3,M4,M5}
-  uint8_t tool;          // {M6}
-  uint8_t tool_comp;     // {G43}
+  uint8_t tool_changer;     // {M6}
+  uint8_t tool_cmp_idx;     // {G43}
 } gc_modal_t;  
 
 typedef struct {
@@ -166,7 +170,8 @@ typedef struct {
   float spindle_speed;             // RPM
   float feed_rate;                 // Millimeters/min
 
-  uint8_t tool_slot;
+  uint8_t tool_changer_slot;
+  uint8_t tool_current;
 //  uint8_t tool_comp;
   gc_tools_t tool_table[ N_TOOL_TABLE];
 
@@ -176,7 +181,7 @@ typedef struct {
                                 // position in mm. Loaded from EEPROM when called.  
   float coord_offset[N_AXIS];   // Retains the G92 coordinate offset (work coordinates) relative to
                                 // machine zero in mm. Non-persistent. Cleared upon reset and boot.    
-  float tool_length_offset;     // Tracks tool length offset value when enabled.
+//  float tool_length_offset;     // Tracks tool length offset value when enabled.
 } parser_state_t;
 extern parser_state_t gc_state;
 

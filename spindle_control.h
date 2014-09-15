@@ -27,6 +27,7 @@
 #ifndef spindle_control_h
 #define spindle_control_h 
 
+#define CMD_SPINDLE 0x80
 
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();

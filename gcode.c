@@ -252,8 +252,8 @@ uint8_t gc_execute_line(char *line)
             // all are explicit axis commands, regardless if they require axis words or not.
             if (axis_command) { FAIL(STATUS_GCODE_AXIS_COMMAND_CONFLICT); } // [Axis word/command conflict] }
             switch (int_value) {
-				case 49: gc_block.modal.tool_comp = 0; break;
-				case 43: gc_block.modal.tool_comp = gc_block.values.h; break;
+				case 49: gc_block.modal.tool_cmp_idx = 0; break;
+				case 43: gc_block.modal.tool_cmp_idx = gc_block.values.h; break;
 				default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
             } // [Unsupported G43.x command]
             mantissa = 0; // Set to zero to indicate valid non-integer G command.
@@ -295,7 +295,7 @@ uint8_t gc_execute_line(char *line)
             break;            
   		  case 6:
   		    word_bit = MODAL_GROUP_M6;
-  		    gc_block.modal.tool = gc_block.values.t;
+  		    gc_block.modal.tool_changer = TOOL_CHANGE;
   		    break;
          #ifdef ENABLE_M7  
           case 7:
@@ -454,7 +454,7 @@ uint8_t gc_execute_line(char *line)
   if (bit_istrue(value_words,bit(WORD_T))) {
 	  if (gc_block.values.t >= N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
   } else {
-	  gc_block.values.t = gc_state.tool_slot;
+	  gc_block.values.t = gc_state.tool_changer_slot;
   }
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
@@ -462,7 +462,7 @@ uint8_t gc_execute_line(char *line)
   if (bit_istrue(value_words,bit(WORD_H))) {
 	  if (gc_block.values.h > N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
   } else {
-	  gc_block.values.h = gc_state.modal.tool_comp;
+	  gc_block.values.h = gc_state.modal.tool_cmp_idx;
   }
 
   // [6. Change tool ]: N/A
@@ -553,7 +553,7 @@ uint8_t gc_execute_line(char *line)
       	      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
 
       	      // tool index
-      	      if (int_value < 0) { int_value = gc_state.modal.tool; } // keep current tool
+      	      if (int_value < 0) { int_value = gc_state.tool_current; } // keep current tool
 
       	      if ( int_value > 0) {
 				  // set tool radius
@@ -589,7 +589,7 @@ uint8_t gc_execute_line(char *line)
       	          if (gc_block.values.l == 20) {
       	            // L20: Update coordinate system axis at current position (with modifiers) with programmed value
       	            parameter_data[idx] = gc_state.position[idx]-gc_block.values.xyz[idx]; // L20: Update axis current position to target
-      	            parameter_data[idx] -= gc_state.tool_table[ gc_state.modal.tool].xyz[idx];
+      	            parameter_data[idx] -= gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[idx];
       	          } else {
 					// L2: Update coordinate system axis to programmed value.
 					parameter_data[idx] = gc_block.values.xyz[idx];
@@ -611,7 +611,7 @@ uint8_t gc_execute_line(char *line)
       for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
         if (bit_istrue(axis_words,bit(idx)) ) {
           gc_block.values.xyz[idx] = gc_state.position[idx]-coordinate_data[idx]-gc_block.values.xyz[idx];
-          gc_block.values.xyz[idx] -= gc_state.tool_table[ gc_state.modal.tool].xyz[idx];
+          gc_block.values.xyz[idx] -= gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[idx];
         } else {
           gc_block.values.xyz[idx] = gc_state.coord_offset[idx];
         }
@@ -635,7 +635,7 @@ uint8_t gc_execute_line(char *line)
               // Apply coordinate offsets based on distance mode.
               if (gc_block.modal.distance == DISTANCE_MODE_ABSOLUTE) {
                 gc_block.values.xyz[idx] += coordinate_data[idx] + gc_state.coord_offset[idx];
-                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool_comp].xyz[idx];
+                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[idx];
               } else {  // Incremental mode
                 gc_block.values.xyz[idx] += gc_state.position[idx];
               }
@@ -874,42 +874,47 @@ uint8_t gc_execute_line(char *line)
   // [3. Set feed rate ]:
   gc_state.feed_rate = gc_block.values.f; // Always copy this value. See feed rate error-checking.
 
-  // [4. Set spindle speed ]:
-  if (gc_state.spindle_speed != gc_block.values.s) { 
-    gc_state.spindle_speed = gc_block.values.s; 
-    
-    // Update running spindle only if not in check mode and not already enabled.
-    if (gc_state.modal.spindle != SPINDLE_DISABLE) {
-
-//    	if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
-    	protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
-    	spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
-    }
-  }
-    
   // [5. Select tool ]:
-  if (gc_state.tool_slot != gc_block.values.t) {
-	  gc_state.tool_slot = gc_block.values.t;
-	  tools_select( gc_state.tool_slot);
+  if (gc_state.tool_changer_slot != gc_block.values.t) {
+	  gc_state.tool_changer_slot = gc_block.values.t;
+	  
+	  if (gc_block.modal.tool_changer != TOOL_CHANGE) tools_select( gc_state.tool_changer_slot);
   }
 
   // [6. Change tool ]:
-  if (gc_state.modal.tool != gc_block.modal.tool) {
+  if ( gc_block.modal.tool_changer == TOOL_CHANGE) {
+	gc_block.modal.tool_changer = TOOL_KEEP;
+	
 	gc_block.modal.program_flow = PROGRAM_FLOW_PAUSED;
     protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
 
-	gc_state.modal.tool = gc_block.modal.tool;
-	// add code for tool change here
-	tools_change();
+	gc_state.tool_current = gc_state.tool_changer_slot;
+	// send tool change command
+	tools_change( gc_state.tool_current);
   }
 
+  // [4. Set spindle speed ]:
+  if (gc_state.spindle_speed != gc_block.values.s) {
+	  gc_state.spindle_speed = gc_block.values.s;
+	  
+	  // Update running spindle only if not in check mode and not already enabled.
+	  if (gc_state.modal.spindle != SPINDLE_DISABLE && gc_state.modal.spindle == gc_block.modal.spindle) {
+
+		  //    	if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
+		  protocol_buffer_synchronize();
+		  gc_state.modal.spindle = gc_block.modal.spindle;
+
+		  spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
+	  }
+  }
+  
   // [7. Spindle control ]:
   if (gc_state.modal.spindle != gc_block.modal.spindle) {
     gc_state.modal.spindle = gc_block.modal.spindle;    
 
     // Update spindle control and apply spindle speed when enabling it in this block.    
 //    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
-    protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
+    protocol_buffer_synchronize(); // Finish all remaining buffered motions
     spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
   }
 
@@ -918,7 +923,7 @@ uint8_t gc_execute_line(char *line)
     gc_state.modal.coolant = gc_block.modal.coolant;
 
 //    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
-    protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
+    protocol_buffer_synchronize(); // Finish all remaining buffered motions
     coolant_run(gc_state.modal.coolant);
   }
   
@@ -939,8 +944,8 @@ uint8_t gc_execute_line(char *line)
   // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
   // of execution. The error-checking step would simply load the offset value into the correct
   // axis of the block XYZ value array. 
-  if ( gc_state.modal.tool_comp != gc_block.values.h ) {
-	  gc_state.modal.tool_comp = gc_block.values.h;
+  if ( gc_state.modal.tool_cmp_idx != gc_block.values.h ) {
+	  gc_state.modal.tool_cmp_idx = gc_block.values.h;
   }
 /*
   if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates a change.

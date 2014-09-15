@@ -279,7 +279,7 @@ void limits_soft_check(float *target)
 		if (target[idx] < 0 || target[idx] > -settings.max_travel[idx]) { soft_limit_error = true; }
 	  } else {
 		if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) { soft_limit_error = true; }
-		if ( target[idx] < ( settings.max_travel[idx] + gc_state.tool_table[ gc_block.modal.tool].xyz[idx])) { soft_limit_error = true; }
+		if ( target[idx] < ( settings.max_travel[idx] + gc_state.tool_table[ gc_block.modal.tool_cmp_idx].xyz[idx])) { soft_limit_error = true; }
 	  }
 	#else
 	  // NOTE: max_travel is stored as negative

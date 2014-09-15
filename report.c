@@ -284,8 +284,8 @@ void report_ngc_parameters()
 	printPgmString(PSTR("]\r\n"));
   }
 
-  printPgmString(PSTR("[TLO:")); // Print tool length offset value
-  printFloat_CoordValue(gc_state.tool_length_offset);
+//  printPgmString(PSTR("[TLO:")); // Print tool length offset value
+//  printFloat_CoordValue(gc_state.tool_length_offset);
   printPgmString(PSTR("]\r\n"));
   report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 }
@@ -341,10 +341,10 @@ void report_gcode_modes()
   }
   
   printPgmString(PSTR(" T"));
-  print_uint8_base10(gc_state.tool_slot);
+  print_uint8_base10(gc_state.tool_changer_slot);
 
   printPgmString(PSTR(" H"));
-  print_uint8_base10(gc_state.modal.tool_comp);
+  print_uint8_base10(gc_state.modal.tool_cmp_idx);
   
   printPgmString(PSTR(" F"));
   printFloat_RateValue(gc_state.feed_rate);
@@ -396,6 +396,11 @@ void report_realtime_status()
     case STATE_ALARM: printPgmString(PSTR("<Alarm")); break;
     case STATE_CHECK_MODE: printPgmString(PSTR("<Check")); break;
   }
+  
+  // If reporting a position, convert the current step count (current_position) to millimeters.
+  if (bit_istrue(settings.status_report_mask,(BITFLAG_RT_STATUS_MACHINE_POSITION | BITFLAG_RT_STATUS_WORK_POSITION))) {
+	  for (i=0; i< N_AXIS; i++) { print_position[i] = current_position[i]/settings.steps_per_mm[i]; }
+  }
  
   // Report machine position
   if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_MACHINE_POSITION)) {
@@ -406,7 +411,6 @@ void report_realtime_status()
 //     print_position[X_AXIS] -= print_position[Z_AXIS];    
 //     print_position[Z_AXIS] = current_position[Z_AXIS]/settings.steps_per_mm[Z_AXIS];     
     for (i=0; i< N_AXIS; i++) {
-      print_position[i] = current_position[i]/settings.steps_per_mm[i];
       printFloat_CoordValue(print_position[i]);
       if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     }
@@ -416,8 +420,11 @@ void report_realtime_status()
   if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_WORK_POSITION)) {
     printPgmString(PSTR(",WPos:")); 
     for (i=0; i< N_AXIS; i++) {
+	  // Apply work coordinate offsets and tool length offset to current position.
       print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
-      if (i == TOOL_LENGTH_OFFSET_AXIS) { print_position[i] -= gc_state.tool_length_offset; }    
+	  print_position[i] -= gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[i];
+
+//      if (i == TOOL_LENGTH_OFFSET_AXIS) { print_position[i] -= gc_state.tool_length_offset; }    
       printFloat_CoordValue(print_position[i]);
       if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     }

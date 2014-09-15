@@ -21,6 +21,7 @@
 #ifndef coolant_control_h
 #define coolant_control_h 
 
+#define CMD_COOLANT	0x00
 
 void coolant_init();
 void coolant_stop();

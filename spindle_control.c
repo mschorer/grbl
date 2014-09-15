@@ -62,7 +62,7 @@ void spindle_stop()
 	SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low.
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
-    TWI_buffer_out[0] = 0;
+    TWI_buffer_out[0] =  CMD_SPINDLE;
     TWI_master_start_write( 0x5c, 1);
 #endif
 }
@@ -100,12 +100,13 @@ void spindle_run(uint8_t direction, float rpm)
 	  SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
-	uint8_t rpm_val = min( SPINDLE_RPM_STEPS, floor( rpm / SPINDLE_RPM_SCALE));
+	uint16_t rpm_val = min( 32767, rpm);
 //	if ( rpm > SPINDLE_RPM_MAX) rpm_val = SPINDLE_RPM_STEPS;
 //	else rpm_val = floor( rpm / SPINDLE_RPM_SCALE);
 
-	TWI_buffer_out[0] = rpm_val;
-	TWI_master_start_write( 0x5c, 1);
+	TWI_buffer_out[0] = CMD_SPINDLE | (( rpm_val >> 8) & 0x7f);
+	TWI_buffer_out[1] = rpm_val & 0xff;
+	TWI_master_start_write( 0x5c, 2);
 #endif
   }
 }

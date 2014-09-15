@@ -3,6 +3,11 @@
 *.elf
 *.DS_Store
 *.d
+*.atsln
+*.atsuo
+*.cproj
 /Release
+/Debug
+/grbl_mschorer
 .settings/
 /memory.txt

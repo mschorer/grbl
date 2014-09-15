@@ -47,8 +47,8 @@ void coolant_stop()
 	#endif
 #elif ( COOLANT_CTRL == CTRL_I2C)
 
-	TWI_buffer_out[0] = COOLANT_DISABLE;
-//    TWI_master_start_write( 0x5e, 1);
+	TWI_buffer_out[0] = CMD_COOLANT;
+    TWI_master_start_write( 0x5c, 1);
 #endif
 }
 
@@ -72,7 +72,7 @@ void coolant_run(uint8_t mode)
 #elif ( COOLANT_CTRL == CTRL_I2C)
 	// COOLANT_FLOOD_ENABLE = 1
 	// COOLANT_MIST_ENABLE = 2
-	TWI_buffer_out[0] = mode;
-	//  TWI_master_start_write( 0x5e, 1);
+	TWI_buffer_out[0] = CMD_COOLANT | mode;
+	TWI_master_start_write( 0x5c, 1);
 #endif
 }
