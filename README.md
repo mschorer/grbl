@@ -3,10 +3,21 @@
 ***
 
 recent changes:
-- class-out tool_changer
-- fix setting tool-parameters
+- change i2c protocol (2bytes for speed, 1byte for 7cmds with 16vals)
+- send true rpm values
+- send coolant control, tool changer control
+- send "message"
+- show grbl version
+- displays tool info when changing
+
+next:
+- class out machine specific code into machine_control.(c/h)
+- support tool change move
+- support tool length sensor on tool change
 
 features:
+- class-out tool_changer
+- fix setting tool-parameters
 - support "G10 L1 Px Rr Xx Yy Zz" to set tool offsets for tools 1-4
 - support "G43 Hx" to enable tool compensation for xyz (radius not supported)
 - support Tx for tool carousel select
