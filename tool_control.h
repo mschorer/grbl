@@ -1,8 +1,9 @@
 /*
-  spindle_control.h - spindle control methods
+  tool_changer.h - tool control methods
   Part of Grbl v0.9
 
   Copyright (c) 2012-2014 Sungeun K. Jeon
+  Copyright (c) 2009-2011 Simen Svale Skogsrud
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,26 +18,28 @@
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
-/* 
-  This file is based on work from Grbl v0.8, distributed under the 
-  terms of the MIT-license. See COPYING for more details.  
-    Copyright (c) 2009-2011 Simen Svale Skogsrud
-    Copyright (c) 2012 Sungeun K. Jeon
-*/ 
 
-#ifndef spindle_control_h
-#define spindle_control_h 
+#ifndef tool_changer_h
+#define tool_changer_h
 
-#define CMD_SPINDLE_OFF 0x80
-#define CMD_SPINDLE_HI 0x8000
+#define N_TOOL_TABLE 5  // Number of supported tools + 1, #0 is used as a zero-offset tool
 
-// Initializes spindle pins and hardware PWM, if enabled.
-void spindle_init();
+#define CMD_TOOL_CHANGE	0x10
+#define CMD_TOOL_SELECT	0x20
+#define CMD_MESSAGE	0x70
 
-// Sets spindle direction and spindle rpm via PWM, if enabled.
-void spindle_run(uint8_t direction, float rpm);
+typedef struct {
+  float r;         // tool radius
+  float xyz[3];    // tool offsets for X,Y,Z axes
+} gc_tools_t;
 
-// Kills spindle.
-void spindle_stop();
+// Initialize tool changer
+void tools_init();
+
+// select tools
+void tool_select(uint8_t index);
+
+// perform change
+void tool_change(uint8_t index);
 
 #endif

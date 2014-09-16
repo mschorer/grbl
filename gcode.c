@@ -31,6 +31,7 @@
 #include "motion_control.h"
 #include "spindle_control.h"
 #include "coolant_control.h"
+#include "machine_control.h"
 #include "probe.h"
 #include "report.h"
 
@@ -53,12 +54,17 @@ parser_block_t gc_block;
 
 void gc_init() 
 {
+  uint8_t tool;
   memset(&gc_state, 0, sizeof(gc_state));
   
   // Load default G54 coordinate system.
   if (!(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) { 
     report_status_message(STATUS_SETTING_READ_FAIL); 
-  } 
+  }
+  
+  for( tool=1; tool < N_TOOL_TABLE; tool++) {
+	  settings_read_tool_data( tool, &gc_state.tool_table[tool]);
+  }
 }
 
 
@@ -878,7 +884,7 @@ uint8_t gc_execute_line(char *line)
   if (gc_state.tool_changer_slot != gc_block.values.t) {
 	  gc_state.tool_changer_slot = gc_block.values.t;
 	  
-	  if (gc_block.modal.tool_changer != TOOL_CHANGE) tools_select( gc_state.tool_changer_slot);
+	  tool_select( gc_state.tool_changer_slot);
   }
 
   // [6. Change tool ]:
@@ -890,7 +896,7 @@ uint8_t gc_execute_line(char *line)
 
 	gc_state.tool_current = gc_state.tool_changer_slot;
 	// send tool change command
-	tools_change( gc_state.tool_current);
+	tool_change( gc_state.tool_current);
   }
 
   // [4. Set spindle speed ]:
@@ -969,7 +975,11 @@ uint8_t gc_execute_line(char *line)
   gc_state.modal.distance = gc_block.modal.distance;
   
   // [18. Set retract mode ]: NOT SUPPORTED
-    
+  
+    // send commands to machine control
+    //
+    mctrl_flush();
+	   
   // [19. Go to predefined position, Set G10, or Set axis offsets ]:
   switch(gc_block.non_modal_command) {
 	  case NON_MODAL_SET_COORDINATE_DATA:
@@ -1023,8 +1033,7 @@ uint8_t gc_execute_line(char *line)
       clear_vector(gc_state.coord_offset); // Disable G92 offsets by zeroing offset vector.
       break;
   }
-
-  
+	
   // [20. Motion modes ]:
   // NOTE: Commands G10,G28,G30,G92 lock out and prevent axis words from use in motion modes. 
   // Enter motion modes only if there are axis words or a motion mode command word in the block.

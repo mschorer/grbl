@@ -286,7 +286,7 @@ void report_ngc_parameters()
 
 //  printPgmString(PSTR("[TLO:")); // Print tool length offset value
 //  printFloat_CoordValue(gc_state.tool_length_offset);
-  printPgmString(PSTR("]\r\n"));
+//  printPgmString(PSTR("]\r\n"));
   report_probe_parameters(); // Print probe parameters. Not persistent in memory.
 }
 

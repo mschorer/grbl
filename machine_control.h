@@ -1,5 +1,5 @@
 /*
-  tool_changer.h - tool control methods
+  machine_control.h - speaking to the machine
   Part of Grbl v0.9
 
   Copyright (c) 2012-2014 Sungeun K. Jeon
@@ -19,30 +19,28 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef tool_changer_h
-#define tool_changer_h
+#ifndef machine_control_h
+#define machine_control_h
 
-#define N_TOOL_TABLE 5  // Number of supported tools + 1, #0 is used as a zero-offset tool
+#define MCTRL_I2C_ADDR 0x5c
 
-#define CMD_TOOL_CHANGE	0x10
-#define CMD_TOOL_SELECT	0x20
-#define CMD_MESSAGE	0x70
-
-typedef struct {
-  float r;         // tool radius
-  float xyz[3];    // tool offsets for X,Y,Z axes
-} gc_tools_t;
+#define MCTRL_CMDBUF_LEN 16
+#define MCTRL_MSGBUF_LEN 42
 
 // Initialize tool changer
-void tools_init();
+void mctrl_init();
 
 // select tools
-void tools_select(uint8_t index);
+void mctrl_select(uint8_t index);
 
-// perform change
-void tools_change(uint8_t index);
+// try to send buffer
+bool mctrl_flush();
 
-uint8_t sPrintFloat( unsigned char *buf, uint8_t idx, float n, uint8_t decimal_places);
-uint8_t sPrintString( unsigned char *out, uint8_t idx, unsigned char *str);
+void mctrl_queueCmd( uint8_t b);
+void mctrl_queueInt( uint16_t b);
+
+void mctrl_queueChar( char b);
+void mctrl_queueFloat( float n, uint8_t decimal_places);
+void mctrl_queueString( const char *str);
 
 #endif

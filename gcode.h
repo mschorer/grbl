@@ -27,7 +27,7 @@
 #ifndef gcode_h
 #define gcode_h
 
-#include "tool_changer.h"
+#include "tool_control.h"
 
 // Define modal group internal numbers for checking multiple command violations and tracking the 
 // type of command that is called in the block. A modal group is a group of g-code commands that are

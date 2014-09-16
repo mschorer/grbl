@@ -20,6 +20,7 @@
 
 #include "system.h"
 #include "coolant_control.h"
+#include "machine_control.h"
 #include "protocol.h"
 #include "gcode.h"
 #include "i2c_master.h"
@@ -46,9 +47,7 @@ void coolant_stop()
 	COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
 	#endif
 #elif ( COOLANT_CTRL == CTRL_I2C)
-
-	TWI_buffer_out[0] = CMD_COOLANT;
-    TWI_master_start_write( 0x5c, 1);
+	mctrl_queueCmd( CMD_COOLANT);
 #endif
 }
 
@@ -70,9 +69,6 @@ void coolant_run(uint8_t mode)
 	coolant_stop();
 	}
 #elif ( COOLANT_CTRL == CTRL_I2C)
-	// COOLANT_FLOOD_ENABLE = 1
-	// COOLANT_MIST_ENABLE = 2
-	TWI_buffer_out[0] = CMD_COOLANT | mode;
-	TWI_master_start_write( 0x5c, 1);
+	mctrl_queueCmd( CMD_COOLANT | mode);
 #endif
 }

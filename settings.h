@@ -28,7 +28,7 @@
 #define settings_h
 
 #include "system.h"
-#include "tool_changer.h"
+#include "tool_control.h"
 
 #define GRBL_VERSION "0.9g"
 #define GRBL_VERSION_BUILD "20140915.2"
