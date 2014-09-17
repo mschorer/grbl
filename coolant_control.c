@@ -23,7 +23,6 @@
 #include "machine_control.h"
 #include "protocol.h"
 #include "gcode.h"
-#include "i2c_master.h"
 
 
 void coolant_init()

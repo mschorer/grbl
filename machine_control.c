@@ -36,18 +36,24 @@ uint8_t mctrl_msg_buf[ MCTRL_MSGBUF_LEN];
 
 void mctrl_init()
 {
+	TWI_init();
+	  
 	mctrl_cmd_len = 0;
 	mctrl_msg_len = 0;
 	
-	mctrl_queueChar( CMD_MESSAGE);
+	mctrl_queueMsgChar( CMD_MESSAGE);
 
-	mctrl_queueString( "GRBL v");
-	mctrl_queueString( GRBL_VERSION);
-	mctrl_queueString( " ");
-	mctrl_queueString( GRBL_VERSION_BUILD);
+	mctrl_queueMsgString( "GRBL v");
+	mctrl_queueMsgString( GRBL_VERSION);
+	mctrl_queueMsgString( " ");
+	mctrl_queueMsgString( GRBL_VERSION_BUILD);
 	//	idx = mctrl_queueString( GRBL_VERSION_BUILD);
 	
 	mctrl_flush();
+}
+
+void mctrl_tick() {
+	TWI_tick();
 }
 
 bool mctrl_flush()
@@ -76,18 +82,34 @@ void mctrl_queueCmd( uint8_t b)
 	mctrl_cmd_buf[ mctrl_cmd_len++] = b;
 }
 
-void mctrl_queueInt( uint16_t b)
+void mctrl_queueCmdInt( uint16_t b)
 {
 	mctrl_queueCmd( (b >> 8) & 0xff);
 	mctrl_queueCmd( (b & 0xff));
 }
 
-void mctrl_queueChar( char b)
+void mctrl_queueMsgTool( uint8_t tidx) {
+	
+  mctrl_queueMsgChar( CMD_MESSAGE);
+  
+  mctrl_queueMsgChar( 'T');
+  mctrl_queueMsgChar( 48 + tidx);
+  mctrl_queueMsgString( " R");
+  mctrl_queueMsgFloat( gc_state.tool_table[tidx].r, 2);
+  mctrl_queueMsgString( "\nX");
+  mctrl_queueMsgFloat( gc_state.tool_table[tidx].xyz[0], 2);
+  mctrl_queueMsgString( " Y");
+  mctrl_queueMsgFloat( gc_state.tool_table[tidx].xyz[1], 2);
+  mctrl_queueMsgString( " Z");
+  mctrl_queueMsgFloat( gc_state.tool_table[tidx].xyz[2], 2);
+}
+
+void mctrl_queueMsgChar( char b)
 {
 	mctrl_msg_buf[ mctrl_msg_len++] = b;
 }
 
-void mctrl_queueFloat( float n, uint8_t decimal_places)
+void mctrl_queueMsgFloat( float n, uint8_t decimal_places)
 {
 	uint8_t i = 0;
 	unsigned char buf[10];
@@ -122,14 +144,14 @@ void mctrl_queueFloat( float n, uint8_t decimal_places)
 	}
 	
 	for (; i > 0; i--)
-	  mctrl_queueChar( buf[i-1]);
+	  mctrl_queueMsgChar( buf[i-1]);
 }
 
-void mctrl_queueString( const char *str)
+void mctrl_queueMsgString( const char *str)
 {
 	uint8_t i=0;
 	
 	while ( str[ i] != 0 && i < 30) {
-		mctrl_queueChar( str[ i++]); // Fill in zeros to decimal point for (n < 1)
+		mctrl_queueMsgChar( str[ i++]); // Fill in zeros to decimal point for (n < 1)
 	}
 }

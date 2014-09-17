@@ -23,6 +23,7 @@
 #include "status.h"
 #include "settings.h"
 #include "gcode.h"
+#include "machine_control.h"
 
 //volatile uint8_t status_state;
 volatile uint8_t status_led;
@@ -51,6 +52,8 @@ void status_init()
 //Timer2 Overflow Interrupt Vector, called every 1ms
 ISR(TIMER2_OVF_vect) {
 
+	mctrl_tick();
+	
 	status_ticks--;
 	if ( status_ticks == 0) {
 

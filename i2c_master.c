@@ -19,10 +19,18 @@ void TWI_init(){
   TWI_busy=0;
 }
 
+uint8_t TWI_tick(){
+	if ( TWI_busy) TWI_busy++;
+	
+	if ( TWI_busy > TWI_BUS_BLOCK_TICKS) TWI_busy = 0;
+	
+	return TWI_busy;
+}
+
 // master write to slave
 void TWI_master_start_write(uint8_t slave_addr, uint16_t write_bytes) {//7 bit slave address, number of bytes to write
     TWI_busy=1;
-    if(write_bytes>TWI_BUFFER_MAX){
+	if(write_bytes>TWI_BUFFER_MAX){
         TWI_write_bytes=TWI_BUFFER_MAX;
     }else{
         TWI_write_bytes=write_bytes;

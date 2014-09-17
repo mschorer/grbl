@@ -29,7 +29,6 @@
 #include "machine_control.h"
 #include "protocol.h"
 #include "gcode.h"
-#include "i2c_master.h"
 
 
 void spindle_init()
@@ -104,7 +103,7 @@ void spindle_run(uint8_t direction, float rpm)
 //	if ( rpm > SPINDLE_RPM_MAX) rpm_val = SPINDLE_RPM_STEPS;
 //	else rpm_val = floor( rpm / SPINDLE_RPM_SCALE);
 
-	mctrl_queueInt( CMD_SPINDLE_HI | rpm_val);
+	mctrl_queueCmdInt( CMD_SPINDLE_HI | rpm_val);
 #endif
   }
 }

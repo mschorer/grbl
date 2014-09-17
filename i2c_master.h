@@ -1,4 +1,6 @@
 #define SCL_CLOCK  400000L
+
+#define TWI_BUS_BLOCK_TICKS 2
 //------------------------------------------------------------- TWI ------
 #define TWI_TWSR_status_mask 0xF8
 
@@ -56,6 +58,7 @@ volatile uint16_t TWI_write_bytes;
 #define TWI_STOP    _BV(TWSTO) |    TWI_ENABLE
 
 void TWI_init();
+uint8_t TWI_tick();
 void TWI_master_start_write(uint8_t slave_addr, uint16_t write_bytes);
 void TWI_master_start_read(uint8_t slave_addr, uint16_t read_bytes);
 void TWI_master_start_write_then_read(uint8_t slave_addr, uint16_t write_bytes, uint16_t read_bytes);

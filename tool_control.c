@@ -24,7 +24,6 @@
 #include "machine_control.h"
 #include "protocol.h"
 #include "gcode.h"
-#include "i2c_master.h"
 #include "settings.h"
 #include <stdio.h>
 
@@ -54,16 +53,5 @@ void tool_change( uint8_t index)
   selected_tool = index & 0x0f;
 
   mctrl_queueCmd( CMD_TOOL_CHANGE | selected_tool);
-  
-  mctrl_queueChar( CMD_MESSAGE);
-  mctrl_queueChar( 'T');
-  mctrl_queueChar( 48 + index);
-  mctrl_queueString( " R");
-  mctrl_queueFloat( gc_state.tool_table[index].r, 2);
-  mctrl_queueString( "\nX");
-  mctrl_queueFloat( gc_state.tool_table[index].xyz[0], 2);
-  mctrl_queueString( " Y");
-  mctrl_queueFloat( gc_state.tool_table[index].xyz[1], 2);
-  mctrl_queueString( " Z");
-  mctrl_queueFloat( gc_state.tool_table[index].xyz[2], 2);
+  mctrl_queueMsgTool( index);
 }
