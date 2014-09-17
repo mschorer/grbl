@@ -101,6 +101,7 @@ uint8_t gc_execute_line(char *line)
      executed after successful error-checking. The parser block struct also contains a block
      values struct, word tracking variables, and a non-modal commands tracker for the new 
      block. This struct contains all of the necessary information to execute the block. */
+  uint8_t idx;
      
   memset(&gc_block, 0, sizeof(gc_block)); // Initialize the parser block struct.
   memcpy(&gc_block.modal,&gc_state.modal,sizeof(gc_modal_t)); // Copy current modes
@@ -258,8 +259,13 @@ uint8_t gc_execute_line(char *line)
             // all are explicit axis commands, regardless if they require axis words or not.
             if (axis_command) { FAIL(STATUS_GCODE_AXIS_COMMAND_CONFLICT); } // [Axis word/command conflict] }
             switch (int_value) {
-				case 49: gc_block.modal.tool_cmp_idx = 0; break;
-				case 43: gc_block.modal.tool_cmp_idx = gc_block.values.h; break;
+				case 49: gc_block.modal.tool_cmp_idx = -1; break;
+				case 43:
+					if ( mantissa == 10) {
+						gc_block.modal.tool_cmp_idx = -2;
+						axis_command = AXIS_COMMAND_TOOL_LENGTH_OFFSET;
+					} //else gc_block.modal.tool_cmp_idx = gc_block.values.h; 
+				break;
 				default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
             } // [Unsupported G43.x command]
             mantissa = 0; // Set to zero to indicate valid non-integer G command.
@@ -363,7 +369,6 @@ uint8_t gc_execute_line(char *line)
           if (value < 0.0) { FAIL(STATUS_NEGATIVE_VALUE); } // [Word value cannot be negative]
         }
         value_words |= bit(word_bit); // Flag to indicate parameter assigned.
-      
     }   
   } 
   // Parsing complete!
@@ -465,11 +470,11 @@ uint8_t gc_execute_line(char *line)
   // bit_false(value_words,bit(WORD_T)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
   // [5a. Select tool offset]:
+
   if (bit_istrue(value_words,bit(WORD_H))) {
-	  if (gc_block.values.h > N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
-  } else {
-	  gc_block.values.h = gc_state.modal.tool_cmp_idx;
-  }
+	if (gc_block.values.h > N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
+	gc_block.modal.tool_cmp_idx = gc_block.values.h;
+  } 
 
   // [6. Change tool ]: N/A
   // [7. Spindle control ]: N/A
@@ -502,7 +507,6 @@ uint8_t gc_execute_line(char *line)
             
   // [12. Set length units ]: N/A
   // Pre-convert XYZ coordinate values to millimeters, if applicable.
-  uint8_t idx;
   if (gc_block.modal.units == UNITS_MODE_INCHES) {
     for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
       if (bit_istrue(axis_words,bit(idx)) ) {
@@ -518,8 +522,16 @@ uint8_t gc_execute_line(char *line)
   //   NOTE: Although not explicitly stated so, G43.1 should be applied to only one valid 
   //   axis that is configured (in config.h). There should be an error if the configured axis
   //   is absent or if any of the other axis words are present.
-//  if ( bit_istrue(command_words,bit(MODAL_GROUP_G8))) { // Indicates called in block.
-//  }
+  if ( bit_istrue(command_words,bit(MODAL_GROUP_G8)) && (gc_block.modal.tool_cmp_idx < 0)) { // Indicates called in block.
+	if (bit_isfalse(value_words,bit(WORD_R)) || gc_block.modal.tool_cmp_idx == -1) {
+		gc_block.values.r = 0;
+	} else {
+		bit_false(value_words,(bit(WORD_R)));
+	}
+	for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
+		parameter_data[idx] = ( bit_isfalse(axis_words,bit(idx)) || gc_block.modal.tool_cmp_idx == -1) ? 0 : gc_block.values.xyz[ idx];
+	}
+  }
   
   // [15. Coordinate system selection ]: *N/A. Error, if cutter radius comp is active.
   // TODO: An EEPROM read of the coordinate data may require a buffer sync when the cycle
@@ -861,10 +873,9 @@ uint8_t gc_execute_line(char *line)
 
   // [0. Non-specific error-checks]: Complete unused value words check, i.e. IJK used when in arc
   // radius mode, or axis words that aren't used in the block.  
-  bit_false(value_words,(bit(WORD_N)|bit(WORD_F)|bit(WORD_S)|bit(WORD_T))); // Remove single-meaning value words. 
+  bit_false(value_words,(bit(WORD_N)|bit(WORD_F)|bit(WORD_S)|bit(WORD_T)|bit(WORD_H))); // Remove single-meaning value words. 
   if (axis_command) { bit_false(value_words,(bit(WORD_X)|bit(WORD_Y)|bit(WORD_Z))); } // Remove axis words. 
   if (value_words) { FAIL(STATUS_GCODE_UNUSED_WORDS); } // [Unused words]
-
    
   /* -------------------------------------------------------------------------------------
      STEP 4: EXECUTE!!
@@ -950,19 +961,17 @@ uint8_t gc_execute_line(char *line)
   // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
   // of execution. The error-checking step would simply load the offset value into the correct
   // axis of the block XYZ value array. 
-  if ( gc_state.modal.tool_cmp_idx != gc_block.values.h ) {
-	  gc_state.modal.tool_cmp_idx = gc_block.values.h;
+  if ( gc_state.modal.tool_cmp_idx != gc_block.modal.tool_cmp_idx ) {
+
+//    gc_state.modal.tool_length = gc_block.modal.tool_length;
+	if ( gc_block.modal.tool_cmp_idx <= 0) {
+		gc_state.tool_table[ 0].r = gc_block.values.r;
+		memcpy( gc_state.tool_table[ 0].xyz, parameter_data, sizeof( gc_block.values.xyz));
+		gc_block.modal.tool_cmp_idx = 0;
+	}
+	gc_state.modal.tool_cmp_idx = gc_block.modal.tool_cmp_idx;
   }
-/*
-  if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates a change.
-    gc_state.modal.tool_length = gc_block.modal.tool_length;
-    if (gc_state.modal.tool_length == TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC) { // G43.1
-      gc_state.tool_length_offset = gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS];
-    } else { // G49
-      gc_state.tool_length_offset = 0.0;
-    }
-  }
-*/
+
   // [15. Coordinate system selection ]:
   if (gc_state.modal.coord_select != gc_block.modal.coord_select) {
     gc_state.modal.coord_select = gc_block.modal.coord_select;

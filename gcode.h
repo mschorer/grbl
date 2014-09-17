@@ -141,18 +141,18 @@ typedef struct {
   uint8_t units;         // {G20,G21}
   uint8_t distance;      // {G90,G91}
   uint8_t plane_select;  // {G17,G18,G19}
-  uint8_t tool_length;   // {G43.1,G49}
+//  uint8_t tool_length;   // {G43.1,G49}
   uint8_t coord_select;  // {G54,G55,G56,G57,G58,G59}
   uint8_t program_flow;  // {M0,M1,M2,M30}
   uint8_t coolant;       // {M7,M8,M9}
   uint8_t spindle;       // {M3,M4,M5}
   uint8_t tool_changer;     // {M6}
-  uint8_t tool_cmp_idx;     // {G43}
+  int8_t tool_cmp_idx;     // {G43}
 } gc_modal_t;  
 
 typedef struct {
   float f;         // Feed
-  uint8_t h;		// Tool comp selection
+  int8_t h;		// Tool comp selection
   float ijk[3];    // I,J,K Axis arc offsets
   uint8_t l;       // G10 or canned cycles parameters
   int32_t n;       // Line number

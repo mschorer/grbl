@@ -271,7 +271,7 @@ void report_ngc_parameters()
   } 
 
   // Print tool table
-  for (i=1; i < N_TOOL_TABLE; i++) {
+  for (i=0; i < N_TOOL_TABLE; i++) {
 	printPgmString(PSTR("[T"));
 	print_uint8_base10( i);
 	printPgmString(PSTR(" R"));
