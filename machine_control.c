@@ -29,10 +29,10 @@
 
 
 uint8_t mctrl_cmd_len = 0;
-uint8_t mctrl_cmd_buf[ MCTRL_CMDBUF_LEN];
+uint8_t mctrl_cmd_buf[ MCTRL_CMDBUF_LEN+1];
 
 uint8_t mctrl_msg_len = 0;
-uint8_t mctrl_msg_buf[ MCTRL_MSGBUF_LEN];
+uint8_t mctrl_msg_buf[ MCTRL_MSGBUF_LEN+1];
 
 void mctrl_init()
 {
@@ -79,6 +79,7 @@ bool mctrl_flush()
 
 void mctrl_queueCmd( uint8_t b)
 {
+	if ( mctrl_cmd_len >= MCTRL_CMDBUF_LEN) mctrl_cmd_len = 0;
 	mctrl_cmd_buf[ mctrl_cmd_len++] = b;
 }
 
@@ -106,6 +107,7 @@ void mctrl_queueMsgTool( uint8_t tidx) {
 
 void mctrl_queueMsgChar( char b)
 {
+	if ( mctrl_msg_len >= MCTRL_MSGBUF_LEN) mctrl_msg_len = 0;
 	mctrl_msg_buf[ mctrl_msg_len++] = b;
 }
 
