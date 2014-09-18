@@ -402,6 +402,11 @@ void report_realtime_status()
 	  for (i=0; i< N_AXIS; i++) { print_position[i] = current_position[i]/settings.steps_per_mm[i]; }
   }
  
+  // If reporting a position, convert the current step count (current_position) to millimeters.
+  if (bit_istrue(settings.status_report_mask,(BITFLAG_RT_STATUS_MACHINE_POSITION | BITFLAG_RT_STATUS_WORK_POSITION))) {
+    for (i=0; i< N_AXIS; i++) { print_position[i] = current_position[i]/settings.steps_per_mm[i]; }
+  }
+  
   // Report machine position
   if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_MACHINE_POSITION)) {
     printPgmString(PSTR(",MPos:")); 
@@ -420,7 +425,7 @@ void report_realtime_status()
   if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_WORK_POSITION)) {
     printPgmString(PSTR(",WPos:")); 
     for (i=0; i< N_AXIS; i++) {
-	  // Apply work coordinate offsets and tool length offset to current position.
+      // Apply work coordinate offsets and tool length offset to current position.
       print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
 	  print_position[i] -= gc_state.tool_table[ gc_state.modal.tool_offset_idx].xyz[i];
 
