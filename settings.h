@@ -31,7 +31,7 @@
 #include "tool_control.h"
 
 #define GRBL_VERSION "0.9g"
-#define GRBL_VERSION_BUILD "20140918.0"
+#define GRBL_VERSION_BUILD "20140918.1"
 
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl

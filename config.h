@@ -130,10 +130,6 @@
 #define CTRL_PIN 1
 #define CTRL_I2C 2
 
-#define SPINDLE_RPM_MAX  8500		// ~ 12v * 710rpm/V
-#define SPINDLE_RPM_STEPS 125
-#define SPINDLE_RPM_SCALE 68
-
 #define COOLANT_CTRL CTRL_I2C
 #define SPINDLE_CTRL CTRL_I2C
 
