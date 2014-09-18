@@ -30,7 +30,7 @@
 
 //----------------------------------------------------------------------------------------
 
-#ifdef CPU_MAP_ATMEGA328P // (Arduino Uno) Officially supported by Grbl.
+#ifdef CPU_MAP_ATMEGA328P_MS // (Arduino Uno) Officially supported by Grbl.
 
   // Define serial port pins and interrupt vectors.
   #define SERIAL_RX     USART_RX_vect
