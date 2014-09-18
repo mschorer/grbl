@@ -344,7 +344,7 @@ void report_gcode_modes()
   print_uint8_base10(gc_state.tool_changer_slot);
 
   printPgmString(PSTR(" H"));
-  print_uint8_base10(gc_state.modal.tool_cmp_idx);
+  print_uint8_base10(gc_state.modal.tool_offset_idx);
   
   printPgmString(PSTR(" F"));
   printFloat_RateValue(gc_state.feed_rate);
@@ -422,7 +422,7 @@ void report_realtime_status()
     for (i=0; i< N_AXIS; i++) {
 	  // Apply work coordinate offsets and tool length offset to current position.
       print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
-	  print_position[i] -= gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[i];
+	  print_position[i] -= gc_state.tool_table[ gc_state.modal.tool_offset_idx].xyz[i];
 
 //      if (i == TOOL_LENGTH_OFFSET_AXIS) { print_position[i] -= gc_state.tool_length_offset; }    
       printFloat_CoordValue(print_position[i]);

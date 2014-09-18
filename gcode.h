@@ -98,10 +98,6 @@
 #define UNITS_MODE_MM 0 // G21 (Default: Must be zero)
 #define UNITS_MODE_INCHES 1 // G20
 
-// Modal Group M6: Tool changer
-#define TOOL_KEEP 0
-#define TOOL_CHANGE 1
-
 // Modal Group M7: Spindle control
 #define SPINDLE_DISABLE 0 // M5 (Default: Must be zero)
 #define SPINDLE_ENABLE_CW 1 // M3
@@ -113,8 +109,9 @@
 #define COOLANT_FLOOD_ENABLE 2 // M8
 
 // Modal Group G8: Tool length offset
-#define TOOL_LENGTH_OFFSET_CANCEL 0 // G49 (Default: Must be zero)
-#define TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC 1 // G43.1
+#define TOOL_OFFSET_OFF 0
+#define TOOL_OFFSET_RESET -1 // G49 (Default: Must be zero)
+#define TOOL_OFFSET_DYNAMIC -2 // G43.1
 
 // Modal Group G12: Active work coordinate system
 // N/A: Stores coordinate system value (54-59) to change to.
@@ -141,18 +138,17 @@ typedef struct {
   uint8_t units;         // {G20,G21}
   uint8_t distance;      // {G90,G91}
   uint8_t plane_select;  // {G17,G18,G19}
-//  uint8_t tool_length;   // {G43.1,G49}
+  int8_t tool_offset_idx;   // {G43.1,G49}
   uint8_t coord_select;  // {G54,G55,G56,G57,G58,G59}
   uint8_t program_flow;  // {M0,M1,M2,M30}
+  uint8_t tool_change;  // {M6}
   uint8_t coolant;       // {M7,M8,M9}
   uint8_t spindle;       // {M3,M4,M5}
-  uint8_t tool_changer;     // {M6}
-  int8_t tool_cmp_idx;     // {G43}
 } gc_modal_t;  
 
 typedef struct {
   float f;         // Feed
-  int8_t h;		// Tool comp selection
+  uint8_t h;		// Tool comp selection
   float ijk[3];    // I,J,K Axis arc offsets
   uint8_t l;       // G10 or canned cycles parameters
   int32_t n;       // Line number
@@ -172,7 +168,6 @@ typedef struct {
 
   uint8_t tool_changer_slot;
   uint8_t tool_current;
-//  uint8_t tool_comp;
   gc_tools_t tool_table[ N_TOOL_TABLE];
 
   float position[N_AXIS];       // Where the interpreter considers the tool to be at this point in the code

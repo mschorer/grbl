@@ -78,6 +78,7 @@
   // status display LED
   #define STATUS_LED_DDR   DDRB
   #define STATUS_LED_PORT  PORTB
+  #define STATUS_LED_IN    PINB
   #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
 
 #if ( SPINDLE_CTRL == CTRL_PIN)

@@ -14,8 +14,8 @@ void TWI_init(){
   //SCL_CLOCK and transfer rate set in twim.h
   /* initialize TWI clock: TWPS = 0 => prescaler = 1 */
   TWCR = (TWI_ACK);
-  TWSR = (0<<TWPS1) | (0<<TWPS0);                  /* no prescaler */
-  TWBR = ((F_CPU/SCL_CLOCK)-16)/2;  /* must be > 10 for stable operation */
+  TWSR = (0<<TWPS1) | (0<<TWPS0);	/* no prescaler */
+  TWBR = ((F_CPU/SCL_CLOCK)-16)/2;	/* must be > 10 for stable operation */
   TWI_busy=0;
 }
 
@@ -28,10 +28,10 @@ uint8_t TWI_tick(){
 }
 
 // master write to slave
-void TWI_master_start_write(uint8_t slave_addr, uint16_t write_bytes) {//7 bit slave address, number of bytes to write
+void TWI_master_start_write(uint8_t slave_addr, uint16_t write_bytes) {	//7 bit slave address, number of bytes to write
     TWI_busy=1;
-	if(write_bytes>TWI_BUFFER_MAX){
-        TWI_write_bytes=TWI_BUFFER_MAX;
+	if(write_bytes>TWI_BUFFER_WR_MAX){
+        TWI_write_bytes=TWI_BUFFER_WR_MAX;
     }else{
         TWI_write_bytes=write_bytes;
     }
@@ -44,8 +44,8 @@ void TWI_master_start_write(uint8_t slave_addr, uint16_t write_bytes) {//7 bit s
 // master read from slave
 void TWI_master_start_read(uint8_t slave_addr, uint16_t read_bytes){
     TWI_busy=1;
-    if(read_bytes>TWI_BUFFER_MAX){
-        TWI_read_bytes=TWI_BUFFER_MAX;
+    if(read_bytes>TWI_BUFFER_RD_MAX){
+        TWI_read_bytes=TWI_BUFFER_RD_MAX;
     }else{
         TWI_read_bytes=read_bytes;
     }
@@ -58,13 +58,13 @@ void TWI_master_start_read(uint8_t slave_addr, uint16_t read_bytes){
 // master write then read without releasing buss between
 void TWI_master_start_write_then_read(uint8_t slave_addr, uint16_t write_bytes, uint16_t read_bytes){
     TWI_busy=1;
-    if(write_bytes>TWI_BUFFER_MAX){
-        TWI_write_bytes=TWI_BUFFER_MAX;
+    if(write_bytes>TWI_BUFFER_WR_MAX){
+        TWI_write_bytes=TWI_BUFFER_WR_MAX;
     }else{
         TWI_write_bytes=write_bytes;
     }
-    if(read_bytes>TWI_BUFFER_MAX){
-        TWI_read_bytes=TWI_BUFFER_MAX;
+    if(read_bytes>TWI_BUFFER_RD_MAX){
+        TWI_read_bytes=TWI_BUFFER_RD_MAX;
     }else{
         TWI_read_bytes=read_bytes;
     }
@@ -77,8 +77,8 @@ void TWI_master_start_write_then_read(uint8_t slave_addr, uint16_t write_bytes, 
 // Routine to service interrupts from the TWI hardware.
 // The most important thing is that this routine runs fast and returns control
 // to the hardware asap. 
-// See pages 229, 232, 235, and 238 of the ATmega328 datasheed for detailed 
-// explaination of the logic below.
+// See pages 229, 232, 235, and 238 of the ATmega328 datasheet for detailed 
+// explanation of the logic below.
 ISR(TWI_vect){
 
     TWI_status = TWSR & TWI_TWSR_status_mask;

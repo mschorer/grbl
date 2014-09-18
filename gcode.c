@@ -259,12 +259,12 @@ uint8_t gc_execute_line(char *line)
             // all are explicit axis commands, regardless if they require axis words or not.
             if (axis_command) { FAIL(STATUS_GCODE_AXIS_COMMAND_CONFLICT); } // [Axis word/command conflict] }
             switch (int_value) {
-				case 49: gc_block.modal.tool_cmp_idx = -1; break;
+				case 49: gc_block.modal.tool_offset_idx = TOOL_OFFSET_RESET; break;
 				case 43:
 					if ( mantissa == 10) {
-						gc_block.modal.tool_cmp_idx = -2;
+						gc_block.modal.tool_offset_idx = TOOL_OFFSET_DYNAMIC;
 						axis_command = AXIS_COMMAND_TOOL_LENGTH_OFFSET;
-					} //else gc_block.modal.tool_cmp_idx = gc_block.values.h; 
+					}
 				break;
 				default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
             } // [Unsupported G43.x command]
@@ -307,7 +307,7 @@ uint8_t gc_execute_line(char *line)
             break;            
   		  case 6:
   		    word_bit = MODAL_GROUP_M6;
-  		    gc_block.modal.tool_changer = TOOL_CHANGE;
+  		    gc_block.modal.tool_change = true;
   		    break;
          #ifdef ENABLE_M7  
           case 7:
@@ -473,7 +473,7 @@ uint8_t gc_execute_line(char *line)
 
   if (bit_istrue(value_words,bit(WORD_H))) {
 	if (gc_block.values.h > N_TOOL_TABLE) { FAIL(STATUS_GCODE_UNSUPPORTED_TOOL); }
-	gc_block.modal.tool_cmp_idx = gc_block.values.h;
+	gc_block.modal.tool_offset_idx = gc_block.values.h ? gc_block.values.h : TOOL_OFFSET_RESET;
   } 
 
   // [6. Change tool ]: N/A
@@ -517,19 +517,19 @@ uint8_t gc_execute_line(char *line)
   
   // [13. Cutter radius compensation ]: NOT SUPPORTED. Error, if G53 is active.
   
-  // [14. Cutter length compensation ]: G43.1 NOT SUPPORTED, but G43 and G49 are.
+  // [14. Cutter length compensation ]: G43.1, G43 and G49
   // [G43.1 Errors]: Motion command in same line. 
   //   NOTE: Although not explicitly stated so, G43.1 should be applied to only one valid 
   //   axis that is configured (in config.h). There should be an error if the configured axis
   //   is absent or if any of the other axis words are present.
-  if ( bit_istrue(command_words,bit(MODAL_GROUP_G8)) && (gc_block.modal.tool_cmp_idx < 0)) { // Indicates called in block.
-	if (bit_isfalse(value_words,bit(WORD_R)) || gc_block.modal.tool_cmp_idx == -1) {
-		gc_block.values.r = 0;
-	} else {
+  if ( bit_istrue(command_words,bit(MODAL_GROUP_G8)) && (gc_block.modal.tool_offset_idx <= TOOL_OFFSET_OFF)) { // Indicates called in block.
+	if (bit_istrue(value_words,bit(WORD_R)) && gc_block.modal.tool_offset_idx == TOOL_OFFSET_DYNAMIC) {
 		bit_false(value_words,(bit(WORD_R)));
+	} else {
+		gc_block.values.r = 0.0;
 	}
 	for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
-		parameter_data[idx] = ( bit_isfalse(axis_words,bit(idx)) || gc_block.modal.tool_cmp_idx == -1) ? 0 : gc_block.values.xyz[ idx];
+		parameter_data[idx] = ( bit_istrue(axis_words,bit(idx)) && gc_block.modal.tool_offset_idx == TOOL_OFFSET_DYNAMIC) ? gc_block.values.xyz[ idx] : 0.0;
 	}
   }
   
@@ -607,7 +607,7 @@ uint8_t gc_execute_line(char *line)
       	          if (gc_block.values.l == 20) {
       	            // L20: Update coordinate system axis at current position (with modifiers) with programmed value
       	            parameter_data[idx] = gc_state.position[idx]-gc_block.values.xyz[idx]; // L20: Update axis current position to target
-      	            parameter_data[idx] -= gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[idx];
+      	            parameter_data[idx] -= gc_state.tool_table[ gc_state.modal.tool_offset_idx].xyz[idx];
       	          } else {
 					// L2: Update coordinate system axis to programmed value.
 					parameter_data[idx] = gc_block.values.xyz[idx];
@@ -629,7 +629,7 @@ uint8_t gc_execute_line(char *line)
       for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
         if (bit_istrue(axis_words,bit(idx)) ) {
           gc_block.values.xyz[idx] = gc_state.position[idx]-coordinate_data[idx]-gc_block.values.xyz[idx];
-          gc_block.values.xyz[idx] -= gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[idx];
+          gc_block.values.xyz[idx] -= gc_state.tool_table[ gc_state.modal.tool_offset_idx].xyz[idx];
         } else {
           gc_block.values.xyz[idx] = gc_state.coord_offset[idx];
         }
@@ -653,7 +653,7 @@ uint8_t gc_execute_line(char *line)
               // Apply coordinate offsets based on distance mode.
               if (gc_block.modal.distance == DISTANCE_MODE_ABSOLUTE) {
                 gc_block.values.xyz[idx] += coordinate_data[idx] + gc_state.coord_offset[idx];
-                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool_cmp_idx].xyz[idx];
+                gc_block.values.xyz[idx] += gc_state.tool_table[ gc_state.modal.tool_offset_idx].xyz[idx];
               } else {  // Incremental mode
                 gc_block.values.xyz[idx] += gc_state.position[idx];
               }
@@ -899,8 +899,8 @@ uint8_t gc_execute_line(char *line)
   }
 
   // [6. Change tool ]:
-  if ( gc_block.modal.tool_changer == TOOL_CHANGE) {
-	gc_block.modal.tool_changer = TOOL_KEEP;
+  if ( gc_block.modal.tool_change) {
+	gc_block.modal.tool_change = false;
 	
 	gc_block.modal.program_flow = PROGRAM_FLOW_PAUSED;
     protocol_buffer_synchronize(); // Finish all remaining buffered motions. Program paused when complete.
@@ -961,15 +961,15 @@ uint8_t gc_execute_line(char *line)
   // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
   // of execution. The error-checking step would simply load the offset value into the correct
   // axis of the block XYZ value array. 
-  if ( gc_state.modal.tool_cmp_idx != gc_block.modal.tool_cmp_idx ) {
+  if ( gc_state.modal.tool_offset_idx != gc_block.modal.tool_offset_idx ) {
 
 //    gc_state.modal.tool_length = gc_block.modal.tool_length;
-	if ( gc_block.modal.tool_cmp_idx <= 0) {
-		gc_state.tool_table[ 0].r = gc_block.values.r;
-		memcpy( gc_state.tool_table[ 0].xyz, parameter_data, sizeof( gc_block.values.xyz));
-		gc_block.modal.tool_cmp_idx = 0;
+	if ( gc_block.modal.tool_offset_idx <= TOOL_OFFSET_OFF) {
+		gc_state.tool_table[ TOOL_OFFSET_OFF].r = gc_block.values.r;
+		memcpy( gc_state.tool_table[ TOOL_OFFSET_OFF].xyz, parameter_data, sizeof( gc_block.values.xyz));
+		gc_block.modal.tool_offset_idx = TOOL_OFFSET_OFF;
 	}
-	gc_state.modal.tool_cmp_idx = gc_block.modal.tool_cmp_idx;
+	gc_state.modal.tool_offset_idx = gc_block.modal.tool_offset_idx;
   }
 
   // [15. Coordinate system selection ]:
