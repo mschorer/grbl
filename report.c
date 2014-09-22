@@ -348,6 +348,11 @@ void report_gcode_modes()
   
   printPgmString(PSTR(" F"));
   printFloat_RateValue(gc_state.feed_rate);
+  
+  #ifdef VARIABLE_SPINDLE
+    printPgmString(PSTR(" S"));
+    printFloat_RateValue(gc_state.spindle_speed);
+  #endif
 
   printPgmString(PSTR("]\r\n"));
 }
@@ -396,10 +401,10 @@ void report_realtime_status()
     case STATE_ALARM: printPgmString(PSTR("<Alarm")); break;
     case STATE_CHECK_MODE: printPgmString(PSTR("<Check")); break;
   }
-  
+ 
   // If reporting a position, convert the current step count (current_position) to millimeters.
   if (bit_istrue(settings.status_report_mask,(BITFLAG_RT_STATUS_MACHINE_POSITION | BITFLAG_RT_STATUS_WORK_POSITION))) {
-	  for (i=0; i< N_AXIS; i++) { print_position[i] = current_position[i]/settings.steps_per_mm[i]; }
+    for (i=0; i< N_AXIS; i++) { print_position[i] = current_position[i]/settings.steps_per_mm[i]; }
   }
   
   // Report machine position
