@@ -27,6 +27,25 @@
 #define MCTRL_CMDBUF_LEN 16
 #define MCTRL_MSGBUF_LEN 42
 
+#define CMD_MX	0x00
+
+#define CMD_M3	0x03
+#define CMD_M4	0x04
+#define CMD_M5	0x05
+
+#define CMD_M6	0x06
+
+#define CMD_M7	0x07
+#define CMD_M8	0x08
+#define CMD_M9	0x09
+
+#define CMD_TX	0x10
+
+#define CMD_MESSAGE	0x70
+
+#define CMD_SPINDLE_OFF 0x80
+#define CMD_SPINDLE_HI 0x8000
+
 // Initialize tool changer
 void mctrl_init();
 

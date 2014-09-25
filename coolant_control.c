@@ -46,7 +46,7 @@ void coolant_stop()
 	COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
 	#endif
 #elif ( COOLANT_CTRL == CTRL_I2C)
-	mctrl_queueCmd( CMD_COOLANT);
+	mctrl_queueCmd( CMD_M9);
 #endif
 }
 
@@ -68,6 +68,12 @@ void coolant_run(uint8_t mode)
 	coolant_stop();
 	}
 #elif ( COOLANT_CTRL == CTRL_I2C)
-	mctrl_queueCmd( CMD_COOLANT | mode);
+	switch( mode) {
+		case COOLANT_MIST_ENABLE: 	mctrl_queueCmd( CMD_M7); break;
+		case COOLANT_FLOOD_ENABLE: 	mctrl_queueCmd( CMD_M8); break;
+		
+		default:
+			coolant_stop();		
+	}
 #endif
 }

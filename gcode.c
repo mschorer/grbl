@@ -912,17 +912,11 @@ uint8_t gc_execute_line(char *line)
 
   // [4. Set spindle speed ]:
   if (gc_state.spindle_speed != gc_block.values.s) {
-	  gc_state.spindle_speed = gc_block.values.s;
+	gc_state.spindle_speed = gc_block.values.s;
 	  
-	  // Update running spindle only if not in check mode and not already enabled.
-	  if (gc_state.modal.spindle != SPINDLE_DISABLE && gc_state.modal.spindle == gc_block.modal.spindle) {
-
-		  //    	if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
-		  protocol_buffer_synchronize();
-		  gc_state.modal.spindle = gc_block.modal.spindle;
-
-		  spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
-	  }
+	//    	if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
+	if ( gc_state.modal.spindle != SPINDLE_DISABLE) protocol_buffer_synchronize();
+	spindle_rpm( gc_state.spindle_speed);
   }
   
   // [7. Spindle control ]:
@@ -932,7 +926,7 @@ uint8_t gc_execute_line(char *line)
     // Update spindle control and apply spindle speed when enabling it in this block.    
 //    if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
     protocol_buffer_synchronize(); // Finish all remaining buffered motions
-    spindle_run(gc_state.modal.spindle, gc_state.spindle_speed);
+    spindle_mode(gc_state.modal.spindle);
   }
 
   // [8. Coolant control ]:  

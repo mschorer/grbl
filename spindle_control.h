@@ -27,14 +27,12 @@
 #ifndef spindle_control_h
 #define spindle_control_h 
 
-#define CMD_SPINDLE_OFF 0x80
-#define CMD_SPINDLE_HI 0x8000
-
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();
 
 // Sets spindle direction and spindle rpm via PWM, if enabled.
-void spindle_run(uint8_t direction, float rpm);
+void spindle_rpm( float rpm);
+void spindle_mode( uint8_t direction);
 
 // Kills spindle.
 void spindle_stop();

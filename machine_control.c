@@ -69,10 +69,12 @@ bool mctrl_flush()
 		TWI_buffer_out[ idx] = mctrl_msg_buf[ i];
 	}
 	
-	if ( idx > 0) TWI_master_start_write( MCTRL_I2C_ADDR, idx);
+	if ( idx > 0) {
+		TWI_master_start_write( MCTRL_I2C_ADDR, idx);
 
-	mctrl_cmd_len = 0;
-	mctrl_msg_len = 0;
+		mctrl_cmd_len = 0;
+		mctrl_msg_len = 0;
+	}
 	
 	return true;
 }

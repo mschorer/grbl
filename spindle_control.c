@@ -37,6 +37,10 @@ void spindle_init()
 	// On the Uno, spindle enable and PWM are shared. Other CPUs have seperate enable pin.
 	#ifdef VARIABLE_SPINDLE
 	SPINDLE_PWM_DDR |= (1<<SPINDLE_PWM_BIT); // Configure as PWM output pin.
+
+	#define SPINDLE_RPM_RANGE (SPINDLE_MAX_RPM-SPINDLE_MIN_RPM)
+	TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x02; // set to 1/8 Prescaler
+
 	#ifndef CPU_MAP_ATMEGA328P
 	  SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
 	#endif
@@ -54,7 +58,9 @@ void spindle_stop()
 #if ( SPINDLE_CTRL == CTRL_PIN)
 	// On the Uno, spindle enable and PWM are shared. Other CPUs have seperate enable pin.
 	#ifdef VARIABLE_SPINDLE
+	
 	TCCRA_REGISTER &= ~(1<<COMB_BIT); // Disable PWM. Output voltage is zero.
+	
 	#ifndef CPU_MAP_ATMEGA328P
 	  SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low.
 	#endif
@@ -62,31 +68,17 @@ void spindle_stop()
 	SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low.
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
-	mctrl_queueCmd( CMD_SPINDLE_OFF);
+	mctrl_queueCmd( CMD_M5);
 #endif
 }
 
 
-void spindle_run(uint8_t direction, float rpm) 
+void spindle_rpm( float rpm) 
 {
   if (sys.state == STATE_CHECK_MODE) { return; }
   
-  // Halt or set spindle direction and rpm. 
-  if (direction == SPINDLE_DISABLE) {
-    spindle_stop();
-  } else {
-
 #if ( SPINDLE_CTRL == CTRL_PIN)
-	if (direction == SPINDLE_ENABLE_CW) {
-	  SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
-	} else {
-	  SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
-	}
-
 	#ifdef VARIABLE_SPINDLE
-	  #define SPINDLE_RPM_RANGE (SPINDLE_MAX_RPM-SPINDLE_MIN_RPM)
-	  TCCRA_REGISTER = (1<<COMB_BIT) | (1<<WAVE1_REGISTER) | (1<<WAVE0_REGISTER);
-	  TCCRB_REGISTER = (TCCRB_REGISTER & 0b11111000) | 0x02; // set to 1/8 Prescaler
 	  rpm -= SPINDLE_MIN_RPM;
 	  if ( rpm > SPINDLE_RPM_RANGE ) { rpm = SPINDLE_RPM_RANGE; } // Prevent uint8 overflow
 	  uint8_t current_pwm = floor( rpm*(255.0/SPINDLE_RPM_RANGE) + 0.5);
@@ -100,11 +92,43 @@ void spindle_run(uint8_t direction, float rpm)
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
 	uint16_t rpm_val = min( 32767, rpm);
-//	if ( rpm > SPINDLE_RPM_MAX) rpm_val = SPINDLE_RPM_STEPS;
-//	else rpm_val = floor( rpm / SPINDLE_RPM_SCALE);
-
 	mctrl_queueCmdInt( CMD_SPINDLE_HI | rpm_val);
 #endif
-  }
+}
+
+void spindle_mode(uint8_t direction)
+{
+	if (sys.state == STATE_CHECK_MODE) { return; }
+	
+	// Halt or set spindle direction and rpm.
+
+#if ( SPINDLE_CTRL == CTRL_PIN)
+
+	if (direction == SPINDLE_ENABLE_CW) {
+		SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
+		} else {
+		SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
+	}
+	TCCRA_REGISTER = (1<<COMB_BIT) | (1<<WAVE1_REGISTER) | (1<<WAVE0_REGISTER);
+
+	#ifdef VARIABLE_SPINDLE
+	  #ifndef CPU_MAP_ATMEGA328P // On the Uno, spindle enable and PWM are shared.
+	  SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
+	  #endif
+	#else
+	  SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
+	#endif
+
+#elif ( SPINDLE_CTRL == CTRL_I2C)
+
+	switch(direction) {
+		case SPINDLE_ENABLE_CW: mctrl_queueCmd( CMD_M3); break;
+		case SPINDLE_ENABLE_CCW: mctrl_queueCmd( CMD_M4); break;
+			
+		case SPINDLE_DISABLE:
+		default:
+			spindle_stop();
+	}
+#endif
 }
 

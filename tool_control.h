@@ -24,10 +24,6 @@
 
 #define N_TOOL_TABLE 5  // Number of supported tools + 1, #0 is used as a zero-offset tool
 
-#define CMD_TOOL_CHANGE	0x10
-#define CMD_TOOL_SELECT	0x20
-#define CMD_MESSAGE	0x70
-
 typedef struct {
   float r;         // tool radius
   float xyz[3];    // tool offsets for X,Y,Z axes
