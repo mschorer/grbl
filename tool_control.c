@@ -2,8 +2,7 @@
   tool_changer.c - tool changer control methods
   Part of Grbl v0.9
 
-  Copyright (c) 2012-2014 Sungeun K. Jeon
-  Copyright (c) 2009-2011 Simen Svale Skogsrud
+  Copyright (c) 2014 ms@ms-ite.de
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

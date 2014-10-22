@@ -1,8 +1,8 @@
 /*
-  status.h - Header for status level commands and real-time processes
+  status.h - does a status feedback by LED blink code
   Part of Grbl v0.9
 
-  Copyright (c) 2014 Sungeun K. Jeon  
+  Copyright (c) 2014 ms@ms-ite.de  
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

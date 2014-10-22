@@ -1,8 +1,8 @@
 /*
-  status.c - Handles status level commands and real-time processes
+  status.c - does a status feedback with LED blink codes
   Part of Grbl v0.9
 
-  Copyright (c) 2014 Sungeun K. Jeon  
+  Copyright (c) 2014 ms@ms-ite.de
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ ISR(TIMER2_OVF_vect) {
 
 		if ( ! ( STATUS_LED_IN & (1<<STATUS_LED_BIT))) {
 			switch (sys.state) {
-				case STATE_IDLE:	status_ticks = 2; break;
+				case STATE_IDLE:	status_ticks = 1; break;
 
 				case STATE_QUEUED:	status_ticks = 22; break;
 				case STATE_HOLD:	status_ticks = 42; break;
@@ -66,7 +66,7 @@ ISR(TIMER2_OVF_vect) {
 				case STATE_CYCLE:	status_ticks = 62; break;
 
 				case STATE_HOMING:	status_ticks = 24; break;
-				case STATE_ALARM:	status_ticks = 16; break;
+				case STATE_ALARM:	status_ticks = 8; break;
 				case STATE_CHECK_MODE:	status_ticks = 124; break;
 
 				default: status_ticks = 248;
@@ -75,7 +75,7 @@ ISR(TIMER2_OVF_vect) {
 			STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
 		} else {
 			switch (sys.state) {
-				case STATE_IDLE:	status_ticks = 60; break;
+				case STATE_IDLE:	status_ticks = 61; break;
 
 				case STATE_QUEUED:	status_ticks = 40; break;
 				case STATE_HOLD:	status_ticks = 20; break;
@@ -83,7 +83,7 @@ ISR(TIMER2_OVF_vect) {
 				case STATE_CYCLE:	status_ticks = 62; break;
 
 				case STATE_HOMING:	status_ticks = 90; break;
-				case STATE_ALARM:	status_ticks = 16; break;
+				case STATE_ALARM:	status_ticks = 8; break;
 
 				case STATE_CHECK_MODE:	status_ticks = 120; break;
 				default: status_ticks = 2;

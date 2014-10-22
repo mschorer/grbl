@@ -227,7 +227,22 @@ void protocol_execute_runtime()
       report_realtime_status();
       bit_false_atomic(sys.execute,EXEC_STATUS_REPORT);
     }
-    
+/*    
+    // trigger homing
+    if (( rt_exec & ( EXEC_FEED_HOLD | EXEC_CYCLE_START)) == ( EXEC_FEED_HOLD | EXEC_CYCLE_START)) {
+	    if (sys.state == STATE_ALARM) {
+		    if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) {
+			    // Only perform homing if Grbl is idle or lost.
+			    mc_homing_cycle();
+			    if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
+			    sys.auto_start = false; // Disable planner auto start upon feed hold.
+			}
+	    }
+	    bit_false_atomic(sys.execute,EXEC_FEED_HOLD);
+	    bit_false_atomic(sys.execute,EXEC_CYCLE_START);
+		rt_exec &= ~( EXEC_FEED_HOLD | EXEC_CYCLE_START);
+    }
+*/
     // Execute a feed hold with deceleration, only during cycle.
     if (rt_exec & EXEC_FEED_HOLD) {
       // !!! During a cycle, the segment buffer has just been reloaded and full. So the math involved
