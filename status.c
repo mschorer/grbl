@@ -29,12 +29,25 @@
 //volatile uint8_t status_led;
 volatile uint8_t status_ticks;
 
+GLOBAL_INT_VECTOR( isrLedTimer);
+
 void status_init()
 {
+	ENABLE_PERIPHERAL( STATUS_LED_PERI);
+	ENABLE_PERIPHERAL( TIMER_LED_PERI);
+
 	// set to output
-	STATUS_LED_DDR |= (1<<STATUS_LED_BIT);
+	GPIO_OUTPUT_SET( STATUS_LED_PORT, (1<<STATUS_LED_RED)|(1<<STATUS_LED_GREEN)|(1<<STATUS_LED_BLUE));	// STATUS_LED_DDR |= (1<<STATUS_LED_BIT);
+	GPIO_OUTPUT_STD( STATUS_LED_PORT, (1<<STATUS_LED_RED)|(1<<STATUS_LED_GREEN)|(1<<STATUS_LED_BLUE));
+
 	//STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
 
+	TIMER_ISR_SET( TIMER_LED_PORT, TIMER_LED_VECT, isrLedTimer);
+
+	TIMER_DISABLE( TIMER_LED_PORT, TIMER_A);
+	TIMER_SETUP( TIMER_LED_PORT, TIMER_A, TIMER_TIMA_TIMEOUT, TIMER_GET_DELAY_HZ( 62));
+	TIMER_ENABLE( TIMER_LED_PORT, TIMER_A);
+/*
 	TCCR2B = 0x00;			//Disable Timer2 while we set it up
 
 	TCNT2	= 1;
@@ -43,20 +56,22 @@ void status_init()
 
 	TCCR2A  = 0x00;			//Timer2 Control Reg A: Normal port operation, Wave Gen Mode normal
 	TCCR2B  = (1<<CS22) | (1<<CS21) | (1<<CS20);	//0x07;			//Timer2 Control Reg B: Timer Prescaler set to 1024
-
+*/
 //	status_state = PROGRAM_FLOW_COMPLETED;
 	status_ticks = 62;
 }
 
 //Timer2 Overflow Interrupt Vector, called every 1ms
-ISR(TIMER2_OVF_vect) {
+ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
+
+	TIMER_INT_CLEAR( TIMER_LED_PORT);
 
 	mctrl_tick();
 	
 	status_ticks--;
 	if ( status_ticks == 0) {
 
-		if ( ! ( STATUS_LED_IN & (1<<STATUS_LED_BIT))) {
+		if ( ! GPIO_READ_MASKED( STATUS_LED_IN, 1<<STATUS_LED_RED)) {
 			switch (sys.state) {
 				case STATE_IDLE:	status_ticks = 1; break;
 
@@ -72,7 +87,7 @@ ISR(TIMER2_OVF_vect) {
 				default: status_ticks = 248;
 			}
 
-			STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
+			GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_RED, 1<<STATUS_LED_RED);	//STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
 		} else {
 			switch (sys.state) {
 				case STATE_IDLE:	status_ticks = 61; break;
@@ -89,10 +104,7 @@ ISR(TIMER2_OVF_vect) {
 				default: status_ticks = 2;
 			}
 			// toggle bit
-			STATUS_LED_IN |= 1<<STATUS_LED_BIT;
+			GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_RED, 0);	//STATUS_LED_IN |= 1<<STATUS_LED_BIT;
 		}
-
-		TCNT2 = 1;
-		TIFR2 = 0;
 	}
 };

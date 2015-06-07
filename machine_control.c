@@ -22,7 +22,10 @@
 #include "machine_control.h"
 #include "protocol.h"
 #include "gcode.h"
+
 #include "i2c_master.h"
+#include "i2c_tiva.h"
+
 #include "settings.h"
 #include <stdio.h>
 
@@ -39,7 +42,7 @@ void mctrl_init()
 	  
 	mctrl_cmd_len = 0;
 	mctrl_msg_len = 0;
-	
+/*
 	mctrl_queueMsgChar( CMD_MESSAGE);
 
 	mctrl_queueMsgString( "GRBL v");
@@ -49,6 +52,7 @@ void mctrl_init()
 	//	idx = mctrl_queueString( GRBL_VERSION_BUILD);
 	
 	mctrl_flush();
+*/
 }
 
 void mctrl_tick() {
@@ -57,24 +61,32 @@ void mctrl_tick() {
 
 bool mctrl_flush()
 {
-	if ( TWI_busy) return false;
+	// uint8_t i;
+
+	if ( TWI_isBusy()) return false;
+
+	TWI_queue( mctrl_cmd_buf, mctrl_cmd_len);
+	TWI_queue( mctrl_msg_buf, mctrl_msg_len);
 	
+	TWI_send( MCTRL_I2C_ADDR);
+/*
+
 	uint8_t idx;
 	for( idx=0; idx < mctrl_cmd_len; idx++) {
 		TWI_buffer_out[ idx] = mctrl_cmd_buf[ idx];
 	}
 	
-	for( uint8_t i = 0; i < mctrl_msg_len; i++, idx++) {
+	for( i = 0; i < mctrl_msg_len; i++, idx++) {
 		TWI_buffer_out[ idx] = mctrl_msg_buf[ i];
 	}
 	
 	if ( idx > 0) {
-		TWI_master_start_write( MCTRL_I2C_ADDR, idx);
+		TWI_queue( MCTRL_I2C_ADDR, idx);
 
 		mctrl_cmd_len = 0;
 		mctrl_msg_len = 0;
 	}
-	
+*/
 	return true;
 }
 

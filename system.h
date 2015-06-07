@@ -22,11 +22,11 @@
 #define system_h
 
 // Define system header files and standard libraries used by Grbl
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-#include <avr/interrupt.h>
-#include <avr/wdt.h>
-#include <util/delay.h>
+//#include <avr/io.h>
+//#include <avr/pgmspace.h>
+//#include <avr/interrupt.h>
+//#include <avr/wdt.h>
+//#include <util/delay.h>
 #include <math.h>
 #include <inttypes.h>    
 #include <string.h>
@@ -71,7 +71,7 @@
 // Define global system variables
 typedef struct {
   uint8_t abort;                 // System abort flag. Forces exit back to main loop for reset.
-  uint8_t state;                 // Tracks the current state of Grbl.
+  volatile uint8_t state;                 // Tracks the current state of Grbl.
   volatile uint8_t execute;      // Global system runtime executor bitflag variable. See EXEC bitmasks.
   uint8_t homing_axis_lock;
   int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps. 
@@ -82,6 +82,8 @@ typedef struct {
 } system_t;
 extern system_t sys;
 
+//global variable for system clock frequency
+extern uint32_t ui32SysClock;
 
 // Initialize the serial protocol
 void system_init();

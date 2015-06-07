@@ -39,7 +39,7 @@ settings_t settings;
 // Method to store startup lines into EEPROM
 void settings_store_startup_line(uint8_t n, char *line)
 {
-  uint32_t addr = n*(LINE_BUFFER_SIZE+1)+EEPROM_ADDR_STARTUP_BLOCK;
+  uint32_t addr = n*(STARTUP_LINE_SIZE)+EEPROM_ADDR_STARTUP_BLOCK;
   memcpy_to_eeprom_with_checksum(addr,(char*)line, LINE_BUFFER_SIZE);
 }
 
@@ -69,7 +69,7 @@ void settings_write_tool_data(uint8_t tool_select, gc_tools_t *tool_data)
 // Method to store Grbl global settings struct and version number into EEPROM
 void write_global_settings() 
 {
-  eeprom_put_char(0, SETTINGS_VERSION);
+  settings.version = SETTINGS_VERSION;
   memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, (char*)&settings, sizeof(settings_t));
 }
 
@@ -127,25 +127,27 @@ void settings_clear_parameters() {
 // Helper function to clear the EEPROM space containing the startup lines.
 void settings_clear_startup_lines() {
   #if N_STARTUP_LINE > 0
-  eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK, 0);
+	eeprom_clear( EEPROM_ADDR_STARTUP_BLOCK, 4);	// eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK, 0);
   #endif
   #if N_STARTUP_LINE > 1
-  eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK+(LINE_BUFFER_SIZE+1), 0);
+	eeprom_clear( EEPROM_ADDR_STARTUP_BLOCK+(STARTUP_LINE_SIZE), 4);	//   eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK+(LINE_BUFFER_SIZE+1), 0);
   #endif
 }
 
 
 // Helper function to clear the EEPROM space containing the user build info string.
-void settings_clear_build_info() { eeprom_put_char(EEPROM_ADDR_BUILD_INFO , 0); }
-
+void settings_clear_build_info() {
+	eeprom_clear( EEPROM_ADDR_STARTUP_BLOCK, 4);	// eeprom_put_char(EEPROM_ADDR_BUILD_INFO , 0);
+}
 
 // Reads startup line from EEPROM. Updated pointed line string data.
 uint8_t settings_read_startup_line(uint8_t n, char *line)
 {
-  uint32_t addr = n*(LINE_BUFFER_SIZE+1)+EEPROM_ADDR_STARTUP_BLOCK;
+	uint8_t i;
+  uint32_t addr = n*(STARTUP_LINE_SIZE)+EEPROM_ADDR_STARTUP_BLOCK;
   if (!(memcpy_from_eeprom_with_checksum((char*)line, addr, LINE_BUFFER_SIZE))) {
     // Reset line with default value
-    line[0] = 0; // Empty line
+   	line[0] = 0; // Empty line
     settings_store_startup_line(n, line);
     return(false);
   }
@@ -197,17 +199,13 @@ uint8_t settings_read_tool_data(uint8_t tool_select, gc_tools_t *tool_data)
 
 // Reads Grbl global settings struct from EEPROM.
 uint8_t read_global_settings() {
-  // Check version-byte of eeprom
-  uint8_t version = eeprom_get_char(0);
-  if (version == SETTINGS_VERSION) {
-    // Read settings-record and check checksum
-    if (!(memcpy_from_eeprom_with_checksum((char*)&settings, EEPROM_ADDR_GLOBAL, sizeof(settings_t)))) {
-      return(false);
-    }
-  } else {
-    return(false); 
-  }
-  return(true);
+
+	// Read settings-record and check checksum
+	if (!(memcpy_from_eeprom_with_checksum((char*)&settings, EEPROM_ADDR_GLOBAL, sizeof(settings_t)))) {
+	  return(false);
+	}
+
+	return ( settings.version == SETTINGS_VERSION);
 }
 
 

@@ -28,6 +28,7 @@
 #ifndef cpu_map_h
 #define cpu_map_h
 
+#include "hw_abstraction.h"
 
 //----------------------------------------------------------------------------------------
 
@@ -44,6 +45,11 @@
   #define Y_STEP_BIT      4  // Uno Digital Pin 3
   #define Z_STEP_BIT      6  // Uno Digital Pin 4
   #define STEP_MASK       ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
+
+  #define STEP_TIMER_PERI	/* SYSCTL_PERIPH_TIMER1 */
+  #define TIMER_STEP_PORT	/* TIMER1_BASE */
+  #define TIMER_STEP_VECTA	TIMER1_COMPA_vect
+  #define TIMER_STEP_VECTB	TIMER0_OVF_vect
 
   // Define step direction output pins. NOTE: All direction pins must be on the same port.
   #define DIRECTION_DDR     DDRD
@@ -81,10 +87,12 @@
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
 
   // status display LED
+  #define TIMER_LED_PORT	//
+  #define TIMER_LED_VECT	TIMER2_OVF_vect
   #define STATUS_LED_DDR   DDRB
   #define STATUS_LED_PORT  PORTB
   #define STATUS_LED_IN    PINB
-  #define STATUS_LED_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+  #define STATUS_LED_RED   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
 
 #if ( SPINDLE_CTRL == CTRL_PIN)
   // Define spindle enable and spindle direction output pins.
@@ -160,6 +168,157 @@
 #endif
 #endif
 
+//----------------------------------------------------------------------------------------
+
+#ifdef CPU_MAP_TIVA // (Arduino Uno) Officially supported by Grbl.
+
+  // Define serial port pins and interrupt vectors.
+  #define SERIAL_PERI	SYSCTL_PERIPH_UART0
+  #define SERIAL_PORT	  UART0_BASE
+  #define SERIAL_RX     USART_RX_vect
+  #define SERIAL_UDRE   USART_UDRE_vect
+
+  // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
+  #define STEP_PERI		SYSCTL_PERIPH_GPIOA
+  #define STEP_DDR        GPIO_PORTA_AHB_BASE
+  #define STEP_PORT       GPIO_PORTA_AHB_BASE
+  #define X_STEP_BIT      2  // Uno Digital Pin 2
+  #define Y_STEP_BIT      3  // Uno Digital Pin 3
+  #define Z_STEP_BIT      4  // Uno Digital Pin 4
+  #define STEP_MASK       ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
+
+  #define STEP_TIMER_PERI		SYSCTL_PERIPH_WTIMER1
+  #define TIMER_STEP_PORT	WTIMER1_BASE
+  #define TIMER_STEP_A		TIMER_A
+  #define TIMER_STEP_B		TIMER_B
+
+  // Define step direction output pins. NOTE: All direction pins must be on the same port.
+  #define DIRECTION_PERI	SYSCTL_PERIPH_GPIOE
+  #define DIRECTION_DDR     GPIO_PORTE_AHB_BASE
+  #define DIRECTION_PORT    GPIO_PORTE_AHB_BASE
+  #define X_DIRECTION_BIT   2  // Uno Digital Pin 5
+  #define Y_DIRECTION_BIT   3  // Uno Digital Pin 6
+  #define Z_DIRECTION_BIT   4  // Uno Digital Pin 7
+  #define DIRECTION_MASK    ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
+
+  // Define stepper driver enable/disable output pin.
+  #define STEPPERS_DISABLE_PERI		SYSCTL_PERIPH_GPIOD
+  #define STEPPERS_DISABLE_DDR    GPIO_PORTD_AHB_BASE
+  #define STEPPERS_DISABLE_PORT   GPIO_PORTD_AHB_BASE
+  #define STEPPERS_DISABLE_BIT    0  // Uno Digital Pin 8
+  #define STEPPERS_DISABLE_MASK   (1<<STEPPERS_DISABLE_BIT)
+
+  // Define homing/hard limit switch input pins and limit interrupt vectors.
+  // NOTE: All limit bit pins must be on the same port, but not on a port with other input pins (pinout).
+  #define LIMIT_PERI		SYSCTL_PERIPH_GPIOB
+  #define LIMIT_DDR        GPIO_PORTB_AHB_BASE
+  #define LIMIT_PIN        GPIO_PORTB_AHB_BASE
+  #define LIMIT_PORT       GPIO_PORTB_AHB_BASE
+  #define X_LIMIT_BIT      0  // Uno Digital Pin 9
+  #define Y_LIMIT_BIT      1  // Uno Digital Pin 10
+#if ( SPINDLE_CTRL == CTRL_PIN)
+  #ifdef VARIABLE_SPINDLE // Z Limit pin and spindle enabled swapped to access hardware PWM on Pin 11.
+    #define Z_LIMIT_BIT	   2 // Uno Digital Pin 12
+  #else
+    #define Z_LIMIT_BIT    2  // Uno Digital Pin 11
+  #endif
+#else
+    #define Z_LIMIT_BIT    2  // Uno Digital Pin 11
+#endif
+  #define LIMIT_MASK       ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+  #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
+  #define LIMIT_INT_vect   PCINT0_vect
+  #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
+
+  // status display LED
+  #define TIMER_LED_PERI	SYSCTL_PERIPH_TIMER0
+  #define TIMER_LED_PORT	TIMER0_BASE
+  #define TIMER_LED_VECT	TIMER_A
+
+  #define STATUS_LED_PERI	SYSCTL_PERIPH_GPIOF
+  #define STATUS_LED_DDR   GPIO_PORTF_AHB_BASE
+  #define STATUS_LED_PORT  GPIO_PORTF_AHB_BASE
+  #define STATUS_LED_IN    GPIO_PORTF_AHB_BASE
+  #define STATUS_LED_RED	1  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+  #define STATUS_LED_BLUE	2  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+  #define STATUS_LED_GREEN	3  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+
+#if ( SPINDLE_CTRL == CTRL_PIN)
+  // Define spindle enable and spindle direction output pins.
+  #define SPINDLE_ENABLE_DDR    DDRB
+  #define SPINDLE_ENABLE_PORT   PORTB
+  #ifdef VARIABLE_SPINDLE // Z Limit pin and spindle enabled swapped to access hardware PWM on Pin 11.
+    #define SPINDLE_ENABLE_BIT    3  // Uno Digital Pin 11
+  #else
+    #define SPINDLE_ENABLE_BIT    4  // Uno Digital Pin 12
+  #endif
+  #define SPINDLE_DIRECTION_DDR   DDRB
+  #define SPINDLE_DIRECTION_PORT  PORTB
+  #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+#endif
+
+#if ( COOLANT_CTRL == CTRL_PIN)
+  // Define flood and mist coolant enable output pins.
+  // NOTE: Uno analog pins 4 and 5 are reserved for an i2c interface, and may be installed at
+  // a later date if flash and memory space allows.
+  #define COOLANT_FLOOD_DDR   DDRC
+  #define COOLANT_FLOOD_PORT  PORTC
+  #define COOLANT_FLOOD_BIT   3  // Uno Analog Pin 3
+  #ifdef ENABLE_M7 // Mist coolant disabled by default. See config.h to enable/disable.
+    #define COOLANT_MIST_DDR   DDRC
+    #define COOLANT_MIST_PORT  PORTC
+    #define COOLANT_MIST_BIT   4 // Uno Analog Pin 4
+  #endif
+#endif
+
+  // Define user-control pinouts (cycle start, reset, feed hold) input pins.
+  // NOTE: All pinouts pins must be on the same port and not on a port with other input pins (limits).
+  #define PINOUT_PERI		SYSCTL_PERIPH_GPIOF
+  #define PINOUT_DDR       GPIO_PORTF_AHB_BASE
+  #define PINOUT_PIN       GPIO_PORTF_AHB_BASE
+  #define PINOUT_PORT      GPIO_PORTF_AHB_BASE
+  #define PIN_RESET        4  // Uno Analog Pin 0
+  #define PIN_FEED_HOLD    0  // Uno Analog Pin 1
+  #define PIN_CYCLE_START  4  // Uno Analog Pin 2
+  #define PINOUT_INT       PCIE1  // Pin change interrupt enable pin
+  #define PINOUT_INT_vect  PCINT1_vect
+  #define PINOUT_PCMSK     PCMSK1 // Pin change interrupt register
+  #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
+
+  // Define probe switch input pin.
+  #define PROBE_PERI		SYSCTL_PERIPH_GPIOC
+  #define PROBE_DDR       GPIO_PORTC_AHB_BASE
+  #define PROBE_PIN       GPIO_PORTC_AHB_BASE
+  #define PROBE_PORT      GPIO_PORTC_AHB_BASE
+  #define PROBE_BIT       4  // Uno Digital Pin 12
+  #define PROBE_MASK      (1<<PROBE_BIT)
+
+  #define READY_PERI		SYSCTL_PERIPH_GPIOC
+  #define READY_DDR       GPIO_PORTC_AHB_BASE
+  #define READY_PIN       GPIO_PORTC_AHB_BASE
+  #define READY_PORT      GPIO_PORTC_AHB_BASE
+  #define PIN_READY       7  // Uno Analog Pin 3
+
+#if ( SPINDLE_CTRL == CTRL_PIN)
+  #ifdef VARIABLE_SPINDLE
+    // Advanced Configuration Below You should not need to touch these variables
+    #define TCCRA_REGISTER	 TCCR2A
+    #define TCCRB_REGISTER	 TCCR2B
+    #define OCR_REGISTER     OCR2A
+
+    #define COMB_BIT	     COM2A1
+    #define WAVE0_REGISTER	 WGM20
+    #define WAVE1_REGISTER	 WGM21
+    #define WAVE2_REGISTER	 WGM22
+    #define WAVE3_REGISTER	 WGM23
+
+    // NOTE: On the 328p, these must be the same as the SPINDLE_ENABLE settings.
+    #define SPINDLE_PWM_DDR	  SPINDLE_ENABLE_DDR
+    #define SPINDLE_PWM_PORT  SPINDLE_ENABLE_PORT
+    #define SPINDLE_PWM_BIT	  SPINDLE_ENABLE_BIT // Shared with SPINDLE_ENABLE.
+  #endif // End of VARIABLE_SPINDLE
+#endif
+#endif
 
 //----------------------------------------------------------------------------------------
 

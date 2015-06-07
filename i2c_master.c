@@ -23,9 +23,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+//#include <avr/io.h>
+//#include <avr/interrupt.h>
+//#include <avr/pgmspace.h>
+#include "cpu_map.h"
+
+#ifndef CPU_MAP_TIVA
+
 #include "i2c_master.h"
 
 // initialize the Master TWI, uses included parameters from twim.h
@@ -172,3 +176,5 @@ ISR(TWI_vect){
             break;
     }
 }
+
+#endif // CPU_MAP_TIVA

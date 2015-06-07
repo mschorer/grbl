@@ -26,6 +26,8 @@
   methods to accomodate their needs.
 */
 
+#include "hw_abstraction.h"
+
 #include "system.h"
 #include "report.h"
 #include "print.h"

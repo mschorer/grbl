@@ -24,24 +24,34 @@
     Copyright (c) 2011-2012 Sungeun K. Jeon
 */ 
 
+#include "hw_abstraction.h"
+#include <stdio.h>
+
 #include "system.h"
 #include "serial.h"
 #include "settings.h"
 
 
-void printString(const char *s)
-{
+void printString(const char *s) {
+#ifdef CPU_MAP_TIVA
+	serial_sendString( s);
+#else
   while (*s)
     serial_write(*s++);
+#endif
 }
 
 
 // Print a string stored in PGM-memory
 void printPgmString(const char *s)
 {
-  char c;
+#ifdef CPU_MAP_TIVA
+	serial_sendString( s);
+#else
+	char c;
   while ((c = pgm_read_byte_near(s++)))
     serial_write(c);
+#endif
 }
 
 
@@ -69,7 +79,14 @@ void printPgmString(const char *s)
 
 void print_uint8_base2(uint8_t n)
 { 
-	unsigned char buf[8];
+	char buf[10];
+
+#ifdef CPU_MAP_TIVA
+    sprintf( buf, "%02x", n);
+
+    serial_sendString( buf);
+#else
+	char c;
 	uint8_t i = 0;
 
 	for (; i < 8; i++) {
@@ -78,58 +95,80 @@ void print_uint8_base2(uint8_t n)
 	}
 
 	for (; i > 0; i--)
-		serial_write('0' + buf[i - 1]);
+	serial_write('0' + buf[i - 1]);
+#endif
 }
 
 
 void print_uint8_base10(uint8_t n)
 { 
+	char buf[5];
+
+#ifdef CPU_MAP_TIVA
+    sprintf( buf, "%u", n);
+
+    serial_sendString( buf);
+#else
+	uint8_t i = 0;
+
   if (n == 0) {
-    serial_write('0');
-    return;
-  } 
+	  buf[i++] = '0';
+  } else {
 
-  unsigned char buf[3];
-  uint8_t i = 0;
-
-  while (n > 0) {
-      buf[i++] = n % 10 + '0';
-      n /= 10;
+	  while (n > 0) {
+		  buf[i++] = n % 10 + '0';
+		  n /= 10;
+	  }
   }
 
-  for (; i > 0; i--)
+for (; i > 0; i--)
       serial_write(buf[i - 1]);
+#endif
 }
 
 
 void print_uint32_base10(unsigned long n)
 { 
-  if (n == 0) {
-    serial_write('0');
-    return;
-  } 
+	unsigned char buf[12];
 
-  unsigned char buf[10]; 
-  uint8_t i = 0;  
-  
-  while (n > 0) {
-    buf[i++] = n % 10;
-    n /= 10;
+#ifdef CPU_MAP_TIVA
+    sprintf( buf, "%u", n);
+
+	serial_sendString( buf);
+#else
+	uint8_t i = 0;
+
+  if (n == 0) {
+	  buf[i++] = '0';
+  } else {
+
+	  while (n > 0) {
+		buf[i++] = n % 10 + '0';
+		n /= 10;
+	  }
   }
-    
   for (; i > 0; i--)
-    serial_write('0' + buf[i-1]);
+      serial_write(buf[i - 1]);
+#endif
 }
 
 
 void printInteger(long n)
 {
+#ifdef CPU_MAP_TIVA
+	unsigned char buf[16];
+
+	sprintf( buf, "%i", n);
+
+	serial_sendString( buf);
+#else
   if (n < 0) {
     serial_write('-');
     print_uint32_base10((-n));
   } else {
     print_uint32_base10(n);
   }
+#endif
 }
 
 
@@ -140,10 +179,21 @@ void printInteger(long n)
 // techniques are actually just slightly slower. Found this out the hard way.
 void printFloat(float n, uint8_t decimal_places)
 {
-  if (n < 0) {
-    serial_write('-');
-    n = -n;
-  }
+	uint8_t i = 0;
+	unsigned char buf[10];
+
+#ifdef CPU_MAP_TIVA
+	uint8_t fmt[5];
+
+	sprintf( fmt, "%%.%if", decimal_places);
+    sprintf( buf, fmt, n);
+
+	serial_sendString( buf);
+#else
+	if (n < 0) {
+		buf[i++] = '-';
+		n = -n;
+	}
 
   uint8_t decimals = decimal_places;
   while (decimals >= 2) { // Quickly convert values expected to be E0 to E-4.
@@ -154,8 +204,6 @@ void printFloat(float n, uint8_t decimal_places)
   n += 0.5; // Add rounding factor. Ensures carryover through entire value.
     
   // Generate digits backwards and store in string.
-  unsigned char buf[10]; 
-  uint8_t i = 0;
   uint32_t a = (long)n;  
   buf[decimal_places] = '.'; // Place decimal point, even if decimal places are zero.
   while(a > 0) {
@@ -171,9 +219,9 @@ void printFloat(float n, uint8_t decimal_places)
     buf[i++] = '0'; 
   }   
   
-  // Print the generated string.
   for (; i > 0; i--)
-    serial_write(buf[i-1]);
+      serial_write(buf[i - 1]);
+#endif
 }
 
 
@@ -200,6 +248,7 @@ void printFloat_RateValue(float n) {
 
 void printFloat_SettingValue(float n) { printFloat(n,N_DECIMAL_SETTINGVALUE); }
 
+/*
 // Debug tool to print free memory in bytes at the called point. Not used otherwise.
 void printFreeMemory()
 {
@@ -209,3 +258,4 @@ void printFreeMemory()
   printInteger((int32_t)free);
   printString(" ");
 }
+*/

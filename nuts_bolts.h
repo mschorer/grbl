@@ -27,6 +27,8 @@
 #ifndef nuts_bolts_h
 #define nuts_bolts_h
 
+#include "hw_abstraction.h"
+
 #define false 0
 #define true 1
 
@@ -39,7 +41,11 @@
 #define MM_PER_INCH (25.40)
 #define INCH_PER_MM (0.0393701)
 
-#define TICKS_PER_MICROSECOND (F_CPU/1000000)
+#ifdef CPU_MAP_TIVA
+	#define TICKS_PER_MICROSECOND (SysCtlClockGet()/1000000)
+#else
+	#define TICKS_PER_MICROSECOND (F_CPU/1000000)
+#endif
 
 // Useful macros
 #define clear_vector(a) memset(a, 0, sizeof(a))
@@ -50,9 +56,12 @@
 
 // Bit field and masking macros
 #define bit(n) (1 << n) 
-#define bit_true_atomic(x,mask) {uint8_t sreg = SREG; cli(); (x) |= (mask); SREG = sreg; }
-#define bit_false_atomic(x,mask) {uint8_t sreg = SREG; cli(); (x) &= ~(mask); SREG = sreg; }
-#define bit_toggle_atomic(x,mask) {uint8_t sreg = SREG; cli(); (x) ^= (mask); SREG = sreg; }
+
+//TODO make setting this truly atomic
+#define bit_true_atomic(x,mask) { /*uint8_t sreg = SREG; cli(); */ (x) |= (mask); /*SREG = sreg;*/ }
+#define bit_false_atomic(x,mask) { /*uint8_t sreg = SREG; cli(); */ (x) &= ~(mask); /*SREG = sreg;*/ }
+#define bit_toggle_atomic(x,mask) { /*uint8_t sreg = SREG; cli(); */ (x) ^= (mask); /*SREG = sreg;*/ }
+
 #define bit_true(x,mask) (x) |= (mask)
 #define bit_false(x,mask) (x) &= ~(mask)
 #define bit_istrue(x,mask) ((x & mask) != 0)

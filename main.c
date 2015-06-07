@@ -24,6 +24,43 @@
     Copyright (c) 2011-2012 Sungeun K. Jeon
 */  
 
+#define TARGET_IS_TM4C123_RB1
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+/*
+//#include <inc/tm4c123gh6zrb.h>
+
+#include <inc/hw_memmap.h>
+#include <inc/hw_types.h>
+#include <inc/hw_ssi.h>
+#include <inc/hw_i2c.h>
+#include <inc/hw_gpio.h>
+#include <inc/hw_adc.h>
+#include <inc/hw_timer.h>
+// #include <inc/hw_ints.h>
+#include <inc/hw_sysctl.h>
+
+//#include <driverlib/rom.h>
+//#include <driverlib/rom_map.h>
+
+#include <driverlib/pin_map.h>
+#include <driverlib/sysctl.h>
+#include <driverlib/gpio.h>
+
+#include <driverlib/ssi.h>
+#include <driverlib/i2c.h>
+#include <driverlib/interrupt.h>
+#include <driverlib/sysctl.h>
+
+#include <driverlib/adc.h>
+#include <driverlib/timer.h>
+
+#include <assert.h>
+*/
+#include "hw_abstraction.h"
+
 #include "system.h"
 #include "serial.h"
 #include "settings.h"
@@ -39,14 +76,27 @@
 #include "probe.h"
 #include "report.h"
 #include "status.h"
+#include "eeprom.h"
 
 // Declare system global variable structure
 system_t sys; 
 
+uint32_t ui32SysClock;
 
 int main(void)
 {
-  // Initialize system upon power-up.
+	// Initialize system upon power-up.
+
+	FPULazyStackingEnable();
+	FPUEnable();
+
+	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+
+	//TODO use the driverlib functiopn here, current version return 66MHZ for the above 80mhz settings
+	ui32SysClock = 80000000;
+
+	eeprom_init();
+
   serial_init();   // Setup serial baud rate and interrupts
   settings_init(); // Load grbl settings from EEPROM
   stepper_init();  // Configure stepper pins and interrupt timers
@@ -57,7 +107,12 @@ int main(void)
   
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
   sys.abort = true;   // Set abort to complete initialization
+
+#ifdef CPU_MAP_TIVA
+  IntMasterEnable();
+#else
   sei(); // Enable interrupts
+#endif
 
   // Check for power-up and set system alarm if homing is enabled to force homing cycle
   // by setting Grbl's alarm state. Alarm locks out all g-code commands, including the
@@ -105,5 +160,4 @@ int main(void)
     protocol_main_loop();
     
   }
-  return 0;   /* Never reached */
 }

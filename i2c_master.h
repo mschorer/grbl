@@ -19,6 +19,10 @@
 */
 // interrupt driven i2c master based on TWI hardware
 
+#include "cpu_map.h"
+
+
+#ifndef CPU_MAP_TIVA
 
 #define SCL_CLOCK  400000L
 
@@ -84,7 +88,12 @@ volatile uint16_t TWI_write_bytes;
 
 void TWI_init();
 uint8_t TWI_tick();
+
+void TWI_queue(uint8_t *buf, uint8_t write_bytes);
+void TWI_send( uint8_t adr);
+
 void TWI_master_start_write(uint8_t slave_addr, uint16_t write_bytes);
 void TWI_master_start_read(uint8_t slave_addr, uint16_t read_bytes);
 void TWI_master_start_write_then_read(uint8_t slave_addr, uint16_t write_bytes, uint16_t read_bytes);
 
+#endif // CPU_MAP_TIVA

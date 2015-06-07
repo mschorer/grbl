@@ -35,6 +35,7 @@
 // buffer.
 #ifndef LINE_BUFFER_SIZE
   #define LINE_BUFFER_SIZE 80
+  #define STARTUP_LINE_SIZE 84
 #endif
 
 // Starts Grbl main loop. It handles all incoming characters from the serial port and executes

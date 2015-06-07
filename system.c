@@ -25,13 +25,21 @@
 #include "report.h"
 #include "print.h"
 
+GLOBAL_INT_VECTOR( isrButtons);
 
 void system_init() 
 {
-  PINOUT_DDR &= ~(PINOUT_MASK); // Configure as input pins
-  PINOUT_PORT |= PINOUT_MASK;   // Enable internal pull-up resistors. Normal high operation.
-  PINOUT_PCMSK |= PINOUT_MASK;  // Enable specific pins of the Pin Change Interrupt
-  PCICR |= (1 << PINOUT_INT);   // Enable Pin Change Interrupt
+//  PINOUT_DDR &= ~(PINOUT_MASK); // Configure as input pins
+//  PINOUT_PORT |= PINOUT_MASK;   // Enable internal pull-up resistors. Normal high operation.
+//  PINOUT_PCMSK |= PINOUT_MASK;  // Enable specific pins of the Pin Change Interrupt
+//  PCICR |= (1 << PINOUT_INT);   // Enable Pin Change Interrupt
+
+	ENABLE_PERIPHERAL( PINOUT_PERI);
+  GPIO_INPUT_SET( PINOUT_DDR, PINOUT_MASK);	//LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
+  GPIO_INPUT_INV( PINOUT_PORT,PINOUT_MASK);	//LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
+  GPIO_ISR_SET( PINOUT_PORT, PINOUT_INT_vect, isrButtons);
+  GPIO_INT_ENABLE(PINOUT_PORT,PINOUT_MASK);
+  GLOBAL_INT_ENABLE( PINOUT_INT);
 }
 
 
@@ -39,15 +47,18 @@ void system_init()
 // only the runtime command execute variable to have the main program execute these when 
 // its ready. This works exactly like the character-based runtime commands when picked off
 // directly from the incoming serial data stream.
-ISR(PINOUT_INT_vect) 
+ISR_ROUTINE(PINOUT_INT_vect,isrButtons)	// ISR(PINOUT_INT_vect)
 {
+	GPIO_INT_CLEAR( PINOUT_PIN);
+
   // Enter only if any pinout pin is actively low.
-  if ((PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) { 
-    if (bit_isfalse(PINOUT_PIN,bit(PIN_RESET))) {
+	uint8_t pinstate = GPIO_READ_MASKED( PINOUT_PIN, PINOUT_MASK);
+  if ( pinstate ^ PINOUT_MASK) {		//(PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) {
+    if (bit_isfalse( pinstate,bit(PIN_RESET))) {
       mc_reset();
     } else {
-		if (bit_isfalse(PINOUT_PIN,bit(PIN_FEED_HOLD))) bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
-		if (bit_isfalse(PINOUT_PIN,bit(PIN_CYCLE_START))) bit_true_atomic(sys.execute, EXEC_CYCLE_START);
+		if (bit_isfalse( pinstate,bit(PIN_FEED_HOLD))) bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
+		if (bit_isfalse( pinstate,bit(PIN_CYCLE_START))) bit_true_atomic(sys.execute, EXEC_CYCLE_START);
     } 
   }
 }

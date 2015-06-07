@@ -29,12 +29,16 @@ uint8_t probe_invert_mask;
 // Probe pin initialization routine.
 void probe_init() 
 {
-  PROBE_DDR &= ~(PROBE_MASK); // Configure as input pins
+	ENABLE_PERIPHERAL( PROBE_PERI);
+
+	GPIO_INPUT_SET( PROBE_DDR,PROBE_MASK);
+
+	// PROBE_DDR &= ~(PROBE_MASK); // Configure as input pins
   if (bit_istrue(settings.flags,BITFLAG_INVERT_PROBE_PIN)) { 
-    PROBE_PORT &= ~(PROBE_MASK); // Normal low operation. Requires external pull-down.
+	  GPIO_INPUT_STD( PROBE_PORT,PROBE_MASK);	//PROBE_PORT &= ~(PROBE_MASK); // Normal low operation. Requires external pull-down.
     probe_invert_mask = 0;
   } else {
-    PROBE_PORT |= PROBE_MASK;    // Enable internal pull-up resistors. Normal high operation.
+	  GPIO_INPUT_INV( PROBE_PORT,PROBE_MASK);	//PROBE_PORT |= PROBE_MASK;    // Enable internal pull-up resistors. Normal high operation.
     probe_invert_mask = PROBE_MASK; 
   }
 }

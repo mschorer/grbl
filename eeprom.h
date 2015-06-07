@@ -29,8 +29,15 @@
 #ifndef eeprom_h
 #define eeprom_h
 
-unsigned char eeprom_get_char(unsigned int addr);
-void eeprom_put_char(unsigned int addr, unsigned char new_value);
+void eeprom_init();
+
+void eeprom_clear( unsigned int destination, unsigned int size);
+
+// the following are "private"
+//unsigned char eeprom_get_char(unsigned int addr);
+//void eeprom_put_char(unsigned int addr, unsigned char new_value);
+
+// external interface
 void memcpy_to_eeprom_with_checksum(unsigned int destination, char *source, unsigned int size);
 int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, unsigned int size);
 

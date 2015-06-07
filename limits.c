@@ -24,7 +24,7 @@
     Copyright (c) 2009-2011 Simen Svale Skogsrud
     Copyright (c) 2012 Sungeun K. Jeon
 */  
-  
+
 #include "system.h"
 #include "settings.h"
 #include "protocol.h"
@@ -34,23 +34,32 @@
 #include "limits.h"
 #include "report.h"
 
+#include "hw_abstraction.h"
+
 // Homing axis search distance multiplier. Computed by this value times the axis max travel.
 #define HOMING_AXIS_SEARCH_SCALAR  1.5 // Must be > 1 to ensure limit switch will be engaged.
 
+GLOBAL_INT_VECTOR( isrLimits);
 
 void limits_init() 
 {
-  LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
+	ENABLE_PERIPHERAL( LIMIT_PERI);
+
+  GPIO_INPUT_SET( LIMIT_DDR, LIMIT_MASK);	//LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
 
   if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) {
-    LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
+	  GPIO_INPUT_STD( LIMIT_PORT,LIMIT_MASK);	//LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
   } else {
-    LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
+	  GPIO_INPUT_INV( LIMIT_PORT,LIMIT_MASK);	//LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
   }
 
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
-    PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
+	  GPIO_ISR_SET( LIMIT_PORT, LIMIT_INT_vect, isrLimits);
+	  GPIO_INT_ENABLE(LIMIT_PORT,LIMIT_MASK);
+	  GLOBAL_INT_ENABLE( LIMIT_INT);
+
+	  // LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
+	  // PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
   } else {
     limits_disable(); 
   }
@@ -65,8 +74,11 @@ void limits_init()
 
 void limits_disable()
 {
-  LIMIT_PCMSK &= ~LIMIT_MASK;  // Disable specific pins of the Pin Change Interrupt
-  PCICR &= ~(1 << LIMIT_INT);  // Disable Pin Change Interrupt
+	GPIO_INT_DISABLE( LIMIT_PORT, LIMIT_MASK);
+	GLOBAL_INT_DISABLE( LIMIT_INT);
+
+	// LIMIT_PCMSK &= ~LIMIT_MASK;  // Disable specific pins of the Pin Change Interrupt
+	// PCICR &= ~(1 << LIMIT_INT);  // Disable Pin Change Interrupt
 }
 
 
@@ -82,7 +94,7 @@ void limits_disable()
 // special pinout for an e-stop, but it is generally recommended to just directly connect
 // your e-stop switch to the Arduino reset pin, since it is the most correct way to do this.
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
-  ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
+  ISR_ROUTINE(LIMIT_INT_vect,isrLimits) // DEFAULT: Limit pin change interrupt process.
   {
     // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
     // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
@@ -191,7 +203,8 @@ void limits_go_home(uint8_t cycle_mask)
     st_wake_up(); // Initiate motion
     do {
       // Check limit state. Lock out cycle axes when they change.
-      limit_state = LIMIT_PIN;
+      limit_state = GPIO_READ_MASKED( LIMIT_PIN, LIMIT_MASK);
+
       if (invert_pin) { limit_state ^= LIMIT_MASK; }
       for (idx=0; idx<N_AXIS; idx++) {
         if (axislock & step_pin[idx]) {

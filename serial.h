@@ -50,6 +50,11 @@
 
 void serial_init();
 
+uint32_t serial_strLength( char *data);
+bool serial_sendString( char *data);
+bool serial_sendData( char *data, uint32_t size);
+
+
 // Writes one byte to the TX serial buffer. Called by main program.
 void serial_write(uint8_t data);
 

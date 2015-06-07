@@ -164,8 +164,7 @@ void protocol_main_loop()
     if (sys.abort) { return; } // Bail to main() program loop to reset system.
               
   }
-  
-  return; /* Never reached */
+  /* Never reached */
 }
 
 

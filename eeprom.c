@@ -21,8 +21,99 @@
 *                         $Revision: 1.6 $
 *                         $Date: Friday, February 11, 2005 07:16:44 UTC $
 ****************************************************************************/
-#include <avr/io.h>
-#include <avr/interrupt.h>
+//#include <avr/io.h>
+//#include <avr/interrupt.h>
+
+#include "hw_abstraction.h"
+
+#ifdef CPU_MAP_TIVA
+
+uint8_t eBuffer[ 128];
+
+void eeprom_init() {
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_EEPROM0);
+	SysCtlDelay( 3);
+
+	uint32_t rc = EEPROMInit();
+
+	uint32_t esize = EEPROMSizeGet();
+	uint32_t eblocks = EEPROMBlockCountGet();
+}
+/*
+unsigned char eeprom_get_char( unsigned int addr ) {
+	return 0;
+}
+
+void eeprom_put_char( unsigned int addr, unsigned char new_value ) {
+	;
+}
+*/
+
+void eeprom_clear( unsigned int destination, unsigned int size) {
+	uint32_t i;
+
+	for( i = 0; i < size; i++) {
+		eBuffer[ i] = 0;
+	}
+
+	if ( size % 4) size += 4 - (size % 4);
+	uint32_t rc = EEPROMProgram( (uint32_t *) eBuffer, destination, size);
+}
+
+void memcpy_to_eeprom_with_checksum(unsigned int destination, char *source, unsigned int size) {
+	unsigned char checksum = 0;
+	uint32_t i;
+
+	for( i = 0; i < size; i++) {
+		checksum = (checksum << 1) || (checksum >> 7);
+		checksum += *source;
+		eBuffer[i] = *(source++);
+	}
+	eBuffer[i] = checksum;
+	size++;
+
+	if ( size % 4) size += 4 - (size % 4);
+	uint32_t rc = EEPROMProgram( (uint32_t *) eBuffer, destination, size);
+/*
+  unsigned char checksum = 0;
+  for(; size > 0; size--) {
+    checksum = (checksum << 1) || (checksum >> 7);
+    checksum += *source;
+    eeprom_put_char(destination++, *(source++));
+  }
+  eeprom_put_char(destination, checksum);
+*/
+}
+
+int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, unsigned int size) {
+	uint32_t bsize = size +1;
+	uint32_t i;
+
+	if ( bsize % 4) bsize += 4 - (bsize % 4);
+	EEPROMRead( (uint32_t *) eBuffer, source, bsize);
+
+	unsigned char data, checksum = 0;
+	for( i=0; i < size; i++) {
+		data = eBuffer[i];
+		checksum = (checksum << 1) || (checksum >> 7);
+		checksum += data;
+		*(destination++) = data;
+	}
+	return (checksum == eBuffer[i]);
+
+/*
+  unsigned char data, checksum = 0;
+  for(; size > 0; size--) {
+    data = eeprom_get_char(source++);
+    checksum = (checksum << 1) || (checksum >> 7);
+    checksum += data;
+    *(destination++) = data;
+  }
+  return (checksum == eeprom_get_char(source));
+*/
+}
+
+#else
 
 /* These EEPROM bits have different names on different devices. */
 #ifndef EEPE
@@ -148,4 +239,5 @@ int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, uns
   return(checksum == eeprom_get_char(source));
 }
 
+#endif
 // end of file
