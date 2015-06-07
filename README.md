@@ -1,14 +1,9 @@
-#Grbl - An embedded g-code interpreter and motion-controller for the Arduino/AVR328 microcontroller
+#Grbl - An embedded g-code interpreter and motion-controller for the Arduino/AVR328/**TIVA** microcontroller
 
 ***
 
 recent changes:
-- change i2c protocol (2bytes for speed, 1byte for 7cmds with 16vals)
-- send true rpm values
-- send coolant control, tool changer control
-- send "message"
-- show grbl version
-- displays tool info when changing
+- add a branch for the TIVA port
 
 next:
 - class out machine specific code into machine_control.(c/h)
@@ -16,6 +11,12 @@ next:
 - support tool length sensor on tool change
 
 features:
+- change i2c protocol (2bytes for speed, 1byte for 7cmds with 16vals)
+- send true rpm values
+- send coolant control, tool changer control
+- send "message"
+- show grbl version
+- displays tool info when changing
 - class-out tool_changer
 - fix setting tool-parameters
 - support "G10 L1 Px Rr Xx Yy Zz" to set tool offsets for tools 1-4
