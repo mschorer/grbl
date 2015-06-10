@@ -73,6 +73,8 @@ uint8_t serial_get_tx_buffer_count()
 
 #ifdef CPU_MAP_TIVA
 
+#define TIVA_SERIAL_UART
+
 void isrUart();
 
 //*****************************************************************************
@@ -95,11 +97,225 @@ volatile uint32_t g_ui32SysTickCount = 0;
 volatile uint32_t g_ui32Flags = 0;
 char *g_pcStatus;
 
-static volatile bool g_bUSBConfigured = false;
-
-static volatile bool usbTxRunning = false;
+#ifdef TIVA_SERIAL_UART
 
 //*****************************************************************************
+static volatile bool g_bUSBConfigured = false;
+static volatile bool usbTxRunning = false;
+
+void handleReceive() {
+	uint32_t data;
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN,  1<<STATUS_LED_GREEN);
+
+	while(( data = UARTCharGetNonBlocking(UART0_BASE)) != -1) {
+		g_ui32UARTTxCount++;
+
+		uint8_t next_head;
+
+		// Pick off runtime command characters directly from the serial stream. These characters are
+		// not passed into the buffer, but these set system state flag bits for runtime execution.
+		switch ( data) {
+
+		case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, EXEC_STATUS_REPORT); break; // Set as true
+		case CMD_CYCLE_START:   bit_true_atomic(sys.execute, EXEC_CYCLE_START); break; // Set as true
+		case CMD_FEED_HOLD:     bit_true_atomic(sys.execute, EXEC_FEED_HOLD); break; // Set as true
+		case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
+
+		default: // Write character to buffer
+			next_head = serial_rx_buffer_head + 1;
+			if (next_head == RX_BUFFER_SIZE) { next_head = 0; }
+
+			// Write data to buffer unless it is full.
+			if (next_head != serial_rx_buffer_tail) {
+				serial_rx_buffer[serial_rx_buffer_head] = (uint8_t) data;
+				serial_rx_buffer_head = next_head;
+
+#ifdef ENABLE_XONXOFF
+				if ((serial_get_rx_buffer_count() >= RX_BUFFER_FULL) && flow_ctrl == XON_SENT) {
+					flow_ctrl = SEND_XOFF;
+					UCSR0B |=  (1 << UDRIE0); // Force TX
+				}
+#endif
+
+			}
+		}
+	}
+
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
+}
+
+void handleTransmit() {
+	uint32_t ui32rc;
+	uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
+	uint8_t* data;
+	bool rc = false;
+	uint32_t size;
+
+	if ( tail == serial_tx_buffer_head) {
+		// xmit buffer is empty
+		// stop tx interrupts???
+		UARTIntDisable(UART0_BASE, UART_INT_TX);
+
+		return;
+	}
+
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 1<<STATUS_LED_BLUE);
+
+	do {
+		ui32rc = UARTCharPutNonBlocking(UART0_BASE, serial_tx_buffer[tail]);
+
+		if ( ui32rc == -1) break;
+
+		tail++;
+		if ( tail >= TX_BUFFER_SIZE) tail = 0;
+
+		rc = true;
+
+		g_ui32UARTRxCount ++;
+	} while( true);
+
+	serial_tx_buffer_tail = tail;
+	usbTxRunning = rc;
+
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 0);
+}
+
+//*****************************************************************************
+//
+// The UART interrupt handler.
+//
+//*****************************************************************************
+void isrUart(void)
+{
+    uint32_t ui32Status;
+
+    ui32Status = UARTIntStatus(UART0_BASE, true);
+    UARTIntClear(UART0_BASE, ui32Status);
+
+	if ( g_bSendingBreak) {
+		return;
+	}
+
+	if ( ui32Status & ( UART_INT_RT | UART_INT_RX)) handleReceive();
+	if ( ui32Status & UART_INT_TX) handleTransmit();
+}
+
+void serial_init() {
+
+	//
+	// Configure the required pins for USB operation.
+	//
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+	SysCtlDelay(3);
+
+    //
+    // Set GPIO A0 and A1 as UART pins.
+    //
+    GPIOPinConfigure(GPIO_PA0_U0RX);
+    GPIOPinConfigure(GPIO_PA1_U0TX);
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    //
+    // Configure the UART for 115,200, 8-N-1 operation.
+    //
+    UARTConfigSetExpClk(UART0_BASE, SysCtlClockGet(), 115200,
+                            (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |
+                             UART_CONFIG_PAR_NONE));
+
+    UARTFIFOLevelSet( UART0_BASE, UART_FIFO_TX4_8, UART_FIFO_RX4_8);
+    UARTFIFOEnable( UART0_BASE);
+
+    UARTIntRegister( UART0_BASE, isrUart);
+    IntEnable(INT_UART0);
+    UARTIntEnable(UART0_BASE, UART_INT_RX | UART_INT_RT);
+}
+
+uint32_t serial_strLength( char *data) {
+	uint32_t len = 0;
+
+	while( *data++ != 0) {
+		len++;
+	}
+
+	return len;
+}
+
+bool serial_sendString( char *data) {
+	return serial_sendData( data, serial_strLength( data));
+}
+
+bool serial_sendData( char *data, uint32_t size) {
+	uint32_t idx = 0;
+
+	while( idx < size) {
+		serial_write( data[ idx++]);
+		if ( idx >= TX_BUFFER_SIZE) idx = 0;
+	}
+
+	UARTIntEnable(UART0_BASE, UART_INT_TX);
+
+	return false;
+}
+
+//*****************************************************************************
+//
+// Take as many bytes from the transmit buffer as we have space for and move
+// them into the USB UART's transmit FIFO.
+//
+//*****************************************************************************
+static void USBRead() {
+	uint8_t data;
+	uint32_t iRead;
+
+	if ( g_bSendingBreak) {
+		return;
+	}
+
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN,  1<<STATUS_LED_GREEN);
+
+	while( iRead = USBBufferRead((tUSBBuffer *)&g_sRxBuffer, &data, 1)) {
+		g_ui32UARTTxCount++;
+
+		uint8_t next_head;
+
+		// Pick off runtime command characters directly from the serial stream. These characters are
+		// not passed into the buffer, but these set system state flag bits for runtime execution.
+		switch (data) {
+
+		case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, EXEC_STATUS_REPORT); break; // Set as true
+		case CMD_CYCLE_START:   bit_true_atomic(sys.execute, EXEC_CYCLE_START); break; // Set as true
+		case CMD_FEED_HOLD:     bit_true_atomic(sys.execute, EXEC_FEED_HOLD); break; // Set as true
+		case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
+
+		default: // Write character to buffer
+			next_head = serial_rx_buffer_head + 1;
+			if (next_head == RX_BUFFER_SIZE) { next_head = 0; }
+
+			// Write data to buffer unless it is full.
+			if (next_head != serial_rx_buffer_tail) {
+				serial_rx_buffer[serial_rx_buffer_head] = data;
+				serial_rx_buffer_head = next_head;
+
+#ifdef ENABLE_XONXOFF
+				if ((serial_get_rx_buffer_count() >= RX_BUFFER_FULL) && flow_ctrl == XON_SENT) {
+					flow_ctrl = SEND_XOFF;
+					UCSR0B |=  (1 << UDRIE0); // Force TX
+				}
+#endif
+
+			}
+		}
+	}
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
+}
+
+#else
+
+//*****************************************************************************
+static volatile bool g_bUSBConfigured = false;
+static volatile bool usbTxRunning = false;
+
 
 
 void serial_init() {
@@ -559,7 +775,7 @@ uint32_t RxHandler(void *pvCBData, uint32_t ui32Event, uint32_t ui32MsgValue, vo
 
 	return(0);
 }
-
+#endif
 
 #else
 

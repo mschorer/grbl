@@ -32,6 +32,8 @@
 	#include <driverlib/eeprom.h>
 	#include <driverlib/fpu.h>
 	#include <driverlib/systick.h>
+	#include <driverlib/uart.h>
+	#include <driverlib/pin_map.h>
 
 	#include "usblib/usblib.h"
 	#include "usblib/usbcdc.h"
