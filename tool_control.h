@@ -21,7 +21,7 @@
 #ifndef tool_changer_h
 #define tool_changer_h
 
-#define N_TOOL_TABLE 5  // Number of supported tools + 1, #0 is used as a zero-offset tool
+#define N_TOOL_TABLE 9  // Number of supported tools + 1, #0 is used as a zero-offset tool
 
 typedef struct {
   float r;         // tool radius

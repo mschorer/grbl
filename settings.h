@@ -31,7 +31,7 @@
 #include "tool_control.h"
 
 #define GRBL_VERSION "0.9g"
-#define GRBL_VERSION_BUILD "TIVA_20150528.1"
+#define GRBL_VERSION_BUILD "TIVA_20150611.1"
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
@@ -58,10 +58,10 @@
 // the startup script. The lower half contains the global settings and space for future 
 // developments.
 #define EEPROM_ADDR_GLOBAL			0x000
-#define EEPROM_ADDR_TOOLS			0x080
-#define EEPROM_ADDR_PARAMETERS		0x0c0
-#define EEPROM_ADDR_STARTUP_BLOCK	0x100
-#define EEPROM_ADDR_BUILD_INFO		0x200
+#define EEPROM_ADDR_PARAMETERS		0x060
+#define EEPROM_ADDR_TOOLS			0x100
+#define EEPROM_ADDR_STARTUP_BLOCK	0x1A0
+#define EEPROM_ADDR_BUILD_INFO		0x280
 
 // Define EEPROM address indexing for coordinate parameters
 #define N_COORDINATE_SYSTEM 6  // Number of supported work coordinate systems (from index 1)

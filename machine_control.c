@@ -42,7 +42,7 @@ void mctrl_init()
 	  
 	mctrl_cmd_len = 0;
 	mctrl_msg_len = 0;
-/*
+
 	mctrl_queueMsgChar( CMD_MESSAGE);
 
 	mctrl_queueMsgString( "GRBL v");
@@ -52,7 +52,6 @@ void mctrl_init()
 	//	idx = mctrl_queueString( GRBL_VERSION_BUILD);
 	
 	mctrl_flush();
-*/
 }
 
 void mctrl_tick() {

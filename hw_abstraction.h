@@ -40,7 +40,7 @@
 	#include "usblib/usb-ids.h"
 	#include "usblib/device/usbdevice.h"
 	#include "usblib/device/usbdcdc.h"
-	#include "usb_serial_structs.h"
+	#include "usb_serial_structs.h_"
 
 	#define GLOBAL_INT_VECTOR(fname)		void fname()
 	#define ISR_ROUTINE(vect,isr)			void isr()
@@ -74,7 +74,7 @@
 											SysCtlPeripheralEnable( peri); \
 											SysCtlDelay( 3)
 
-	#define TIMER_GET_DELAY_HZ(hz)			((ui32SysClock / hz)/ 2)
+	#define TIMER_GET_DELAY_HZ(hz)			((SysCtlClockGet() / hz)/ 2)
 	#define TIMER_SETUP( port, timer, reason, to)				/* setup periodic timer */ \
 											TimerConfigure( port, TIMER_CFG_PERIODIC); \
 											TimerLoadSet( port, timer, to); \
@@ -90,7 +90,7 @@
 	#define TIMER_DISABLE( port, timer)		TimerDisable( port, timer)
 
 	#define M_PI							3.14159265359
-	#define F_CPU							ui32SysClock
+	#define F_CPU							SysCtlClockGet()
 
 	//TODO add proper timing calculation here
 	#define MSEC_TO_SYSCTL(ms)				( ms * 100000)

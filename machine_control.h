@@ -45,6 +45,22 @@
 #define CMD_SPINDLE_OFF 0x80
 #define CMD_SPINDLE_HI 0x8000
 
+//----------------------------------------------------------
+
+typedef struct {
+	uint8_t address;
+	uint32_t tail;
+	uint32_t head;
+} t_cmdBlock;
+
+typedef struct {
+	uint8_t tail;
+	uint8_t head;
+	t_cmdBlock queue[8];
+} t_cmdQueue;
+
+//----------------------------------------------------------
+
 // Initialize tool changer
 void mctrl_init();
 

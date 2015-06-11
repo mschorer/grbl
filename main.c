@@ -81,8 +81,6 @@
 // Declare system global variable structure
 system_t sys; 
 
-uint32_t ui32SysClock;
-
 int main(void)
 {
 	// Initialize system upon power-up.
@@ -92,8 +90,7 @@ int main(void)
 
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
-	//TODO use the driverlib functiopn here, current version return 66MHZ for the above 80mhz settings
-	ui32SysClock = 80000000;
+	status_init();
 
 	eeprom_init();
 
@@ -103,8 +100,6 @@ int main(void)
   system_init();   // Configure pinout pins and pin-change interrupt
 
   mctrl_init();
-  status_init();
-  
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
   sys.abort = true;   // Set abort to complete initialization
 

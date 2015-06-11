@@ -1,0 +1,1003 @@
+/*
+  serial.c - Low level functions for sending and recieving bytes via the serial port
+  Part of Grbl v0.9
+
+  Copyright (c) 2012-2014 Sungeun K. Jeon
+
+  Grbl is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  Grbl is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/*
+  This file is based on work from Grbl v0.8, distributed under the
+  terms of the MIT-license. See COPYING for more details.
+    Copyright (c) 2009-2011 Simen Svale Skogsrud
+    Copyright (c) 2011-2012 Sungeun K. Jeon
+*/
+
+//#include <avr/interrupt.h>
+#include "system.h"
+#include "serial.h"
+#include "motion_control.h"
+#include "protocol.h"
+
+#include "hw_abstraction.h"
+#include "cpu_map.h"
+
+
+uint8_t serial_rx_buffer[RX_BUFFER_SIZE];
+volatile uint8_t serial_rx_buffer_head = 0;
+volatile uint8_t serial_rx_buffer_tail = 0;
+
+uint8_t serial_tx_buffer[TX_BUFFER_SIZE];
+volatile uint8_t serial_tx_buffer_head = 0;
+volatile uint8_t serial_tx_buffer_tail = 0;
+
+#define TX_IDLE	0
+#define TX_XMIT	1
+
+volatile uint8_t txState = TX_IDLE;
+
+
+#ifdef ENABLE_XONXOFF
+  volatile uint8_t flow_ctrl = XON_SENT; // Flow control state variable
+#endif
+
+
+// Returns the number of bytes used in the RX serial buffer.
+uint8_t serial_get_rx_buffer_count()
+{
+  uint8_t rtail = serial_rx_buffer_tail; // Copy to limit multiple calls to volatile
+  if (serial_rx_buffer_head >= rtail) { return(serial_rx_buffer_head-rtail); }
+  return (RX_BUFFER_SIZE - (rtail-serial_rx_buffer_head));
+}
+
+
+// Returns the number of bytes used in the TX serial buffer.
+// NOTE: Not used except for debugging and ensuring no TX bottlenecks.
+uint8_t serial_get_tx_buffer_count()
+{
+  uint8_t ttail = serial_tx_buffer_tail; // Copy to limit multiple calls to volatile
+  if (serial_tx_buffer_head >= ttail) { return(serial_tx_buffer_head-ttail); }
+  return (TX_BUFFER_SIZE - (ttail-serial_tx_buffer_head));
+}
+
+#ifdef CPU_MAP_TIVA
+
+void isrUart();
+
+#define USB_UART_BASE	UART0_BASE
+
+//*****************************************************************************
+//
+// The system tick rate expressed both as ticks per second and a millisecond
+// period.
+//
+//*****************************************************************************
+#define SYSTICKS_PER_SECOND 100
+#define SYSTICK_PERIOD_MS (1000 / SYSTICKS_PER_SECOND)
+
+//*****************************************************************************
+//
+// Variables tracking transmit and receive counts.
+//
+//*****************************************************************************
+volatile uint32_t g_ui32UARTTxCount = 0;
+volatile uint32_t g_ui32UARTRxCount = 0;
+#ifdef DEBUG
+uint32_t g_ui32UARTRxErrors = 0;
+#endif
+
+#define TX_GPIO_BASE            GPIO_PORTA_BASE
+#define TX_GPIO_PERIPH          SYSCTL_PERIPH_GPIOA
+#define TX_GPIO_PIN             GPIO_PIN_1
+
+#define RX_GPIO_BASE            GPIO_PORTA_BASE
+#define RX_GPIO_PERIPH          SYSCTL_PERIPH_GPIOA
+#define RX_GPIO_PIN             GPIO_PIN_0
+
+//*****************************************************************************
+//
+// Flag indicating whether or not we are currently sending a Break condition.
+//
+//*****************************************************************************
+static bool g_bSendingBreak = false;
+
+//*****************************************************************************
+//
+// Global system tick counter
+//
+//*****************************************************************************
+volatile uint32_t g_ui32SysTickCount = 0;
+
+//*****************************************************************************
+//
+// Flags used to pass commands from interrupt context to the main loop.
+//
+//*****************************************************************************
+#define COMMAND_PACKET_RECEIVED 0x00000001
+#define COMMAND_STATUS_UPDATE   0x00000002
+
+volatile uint32_t g_ui32Flags = 0;
+char *g_pcStatus;
+
+//*****************************************************************************
+//
+// Global flag indicating that a USB configuration has been set.
+//
+//*****************************************************************************
+static volatile bool g_bUSBConfigured = false;
+
+//*****************************************************************************
+//
+// Internal function prototypes.
+//
+//*****************************************************************************
+static void USBUARTPrimeTransmit(uint32_t ui32Base);
+static void CheckForSerialStateChange(const tUSBDCDCDevice *psDevice,
+                                      int32_t i32Errors);
+static void SetControlLineState(uint16_t ui16State);
+static bool SetLineCoding(tLineCoding *psLineCoding);
+static void GetLineCoding(tLineCoding *psLineCoding);
+static void SendBreak(bool bSend);
+
+void SysTickIntHandler(void);
+static int32_t ReadUARTData(void);
+void USBUARTIntHandler(void);
+
+void serial_init() {
+//	uint32_t ui32TxCount = 0;
+//	uint32_t ui32RxCount = 0;
+
+    //
+    // Configure the required pins for USB operation.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+
+    //
+	// Not configured initially.
+	//
+	g_bUSBConfigured = false;
+
+	//
+	// Enable the peripherals.
+	//
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+	SysCtlDelay(3);
+
+    GPIOPinTypeUSBAnalog(GPIO_PORTD_BASE, GPIO_PIN_5 | GPIO_PIN_4);
+
+	//
+	// Set GPIO A0 and A1 as UART pins.
+	//
+//	GPIOPinConfigure(GPIO_PCTL_PA0_U0RX);
+//	GPIOPinConfigure(GPIO_PCTL_PA1_U0TX);
+    SysCtlPeripheralEnable(TX_GPIO_PERIPH);
+    SysCtlPeripheralEnable(RX_GPIO_PERIPH);
+	GPIOPinTypeUART(GPIO_PORTA_BASE, TX_GPIO_PIN | RX_GPIO_PIN);
+
+	//
+	// Configure the UART for 115200, 8-N-1 operation.
+	//
+	UARTConfigSetExpClk(UART0_BASE, SysCtlClockGet(), 115200,
+						  (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |
+						   UART_CONFIG_PAR_NONE));
+
+	UARTFIFOLevelSet( UART0_BASE, UART_FIFO_TX4_8, UART_FIFO_RX4_8);
+	UARTFIFOEnable( UART0_BASE);
+
+	UARTTxIntModeSet( UART0_BASE, UART_TXINT_MODE_FIFO);
+
+	//
+	// Enable the UART interrupt.
+	//
+	UARTIntRegister( UART0_BASE, isrUart);
+	UARTIntClear(UART0_BASE, UARTIntStatus(UART0_BASE, false));
+	UARTIntEnable( UART0_BASE, (UART_INT_OE | UART_INT_BE | UART_INT_PE | UART_INT_FE | UART_INT_RT | UART_INT_TX | UART_INT_RX));
+
+	//
+	// Enable the system tick.
+	//
+	SysTickPeriodSet( SysCtlClockGet() / SYSTICKS_PER_SECOND);
+	SysTickIntRegister( SysTickIntHandler);
+	SysTickIntEnable();
+	SysTickEnable();
+
+	//
+	// Initialize the transmit and receive buffers.
+	//
+	USBBufferInit(&g_sTxBuffer);
+	USBBufferInit(&g_sRxBuffer);
+
+//	USBIntRegister( 0, USB0DeviceIntHandler);
+
+	//
+	// Set the USB stack mode to Device mode with VBUS monitoring.
+	//
+	USBStackModeSet(0, eUSBModeForceDevice, 0);
+
+	//
+	// Pass our device information to the USB library and place the device
+	// on the bus.
+	//
+	USBDCDCInit(0, &g_sCDCDevice);
+
+	IntEnable(INT_UART0);
+}
+
+bool serial_tx() {
+	uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
+	bool rc = UARTCharPutNonBlocking( UART0_BASE, serial_tx_buffer[tail]);
+
+	if ( rc) {
+		// Update tail position
+		tail++;
+		if (tail == TX_BUFFER_SIZE) { tail = 0; }
+
+		serial_tx_buffer_tail = tail;
+	}
+
+	return rc;
+}
+
+void serial_tx_trigger() {
+	if ( serial_tx_buffer_head != serial_tx_buffer_tail) {
+		// do we need to trigger sending?
+		txState = TX_XMIT;
+		serial_tx();
+	}
+}
+
+// Data Register Empty Interrupt handler
+void isrUart() {
+	uint32_t iState  = UARTIntStatus(UART0_BASE, false);
+	UARTIntClear(UART0_BASE, iState);
+
+	uint32_t ui32Ints;
+    int32_t i32Errors;
+
+    GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 1<<STATUS_LED_GREEN);
+
+	/* Handle transmit FIFO draining        */
+
+	if ( iState & UART_INT_TX) {
+		while( serial_tx_buffer_head != serial_tx_buffer_tail) {
+		  uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
+
+		  #ifdef ENABLE_XONXOFF
+		    if (flow_ctrl == SEND_XOFF) {
+		      UDR0 = XOFF_CHAR;
+		      flow_ctrl = XOFF_SENT;
+		    } else if (flow_ctrl == SEND_XON) {
+		      UDR0 = XON_CHAR;
+		      flow_ctrl = XON_SENT;
+		    } else
+		  #endif
+		  {
+		    // Send a byte from the buffer
+		    bool rc = serial_tx();
+		  }
+
+		  // Turn off Data Register Empty Interrupt to stop tx-streaming if this concludes the transfer
+		  if (tail == serial_tx_buffer_head) {
+			  // buffer empty
+			  // stop tx int?
+			  txState = TX_IDLE;
+		  }
+		}
+
+		USBUARTPrimeTransmit(USB_UART_BASE);
+
+        //
+        // If the output buffer is empty, turn off the transmit interrupt.
+        //
+        if(!USBBufferDataAvailable(&g_sRxBuffer))
+        {
+            UARTIntDisable(USB_UART_BASE, UART_INT_TX);
+        }
+	}
+
+	if (iState & UART_INT_RX || iState & UART_INT_RT) {
+
+		//
+		// Read the UART's characters into the buffer.
+		//
+		i32Errors = ReadUARTData();
+
+		//
+		// Check to see if we need to notify the host of any errors we just
+		// detected.
+		//
+		CheckForSerialStateChange(&g_sCDCDevice, i32Errors);
+
+		while( UARTCharsAvail( UART0_BASE)) {
+
+			  uint8_t data = UARTCharGetNonBlocking( UART0_BASE);
+			  uint8_t next_head;
+
+			  // Pick off runtime command characters directly from the serial stream. These characters are
+			  // not passed into the buffer, but these set system state flag bits for runtime execution.
+			  switch (data) {
+				case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, EXEC_STATUS_REPORT); break; // Set as true
+				case CMD_CYCLE_START:   bit_true_atomic(sys.execute, EXEC_CYCLE_START); break; // Set as true
+				case CMD_FEED_HOLD:     bit_true_atomic(sys.execute, EXEC_FEED_HOLD); break; // Set as true
+				case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
+				default: // Write character to buffer
+				  next_head = serial_rx_buffer_head + 1;
+				  if (next_head == RX_BUFFER_SIZE) { next_head = 0; }
+
+				  // Write data to buffer unless it is full.
+				  if (next_head != serial_rx_buffer_tail) {
+					serial_rx_buffer[serial_rx_buffer_head] = data;
+					serial_rx_buffer_head = next_head;
+
+					#ifdef ENABLE_XONXOFF
+					  if ((serial_get_rx_buffer_count() >= RX_BUFFER_FULL) && flow_ctrl == XON_SENT) {
+						flow_ctrl = SEND_XOFF;
+						UCSR0B |=  (1 << UDRIE0); // Force TX
+					  }
+					#endif
+
+				  }
+				  //TODO: else alarm on overflow?
+			  }
+		  }
+	}
+    GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
+}
+
+//*****************************************************************************
+//
+// The error routine that is called if the driver library encounters an error.
+//
+//*****************************************************************************
+#ifdef DEBUG
+void
+__error__(char *pcFilename, uint32_t ui32Line)
+{
+    while(1)
+    {
+    }
+}
+#endif
+
+//*****************************************************************************
+//
+// This function is called whenever serial data is received from the UART.
+// It is passed the accumulated error flags from each character received in
+// this interrupt and determines from them whether or not an interrupt
+// notification to the host is required.
+//
+// If a notification is required and the control interrupt endpoint is idle,
+// we send the notification immediately.  If the endpoint is not idle, we
+// accumulate the errors in a global variable which will be checked on
+// completion of the previous notification and used to send a second one
+// if necessary.
+//
+//*****************************************************************************
+static void
+CheckForSerialStateChange(const tUSBDCDCDevice *psDevice, int32_t i32Errors)
+{
+    uint16_t ui16SerialState;
+
+    ui16SerialState = USB_CDC_SERIAL_STATE_TXCARRIER | USB_CDC_SERIAL_STATE_RXCARRIER;
+
+    if(i32Errors) {
+        if(i32Errors & UART_DR_OE) ui16SerialState |= USB_CDC_SERIAL_STATE_OVERRUN;
+        if(i32Errors & UART_DR_PE) ui16SerialState |= USB_CDC_SERIAL_STATE_PARITY;
+        if(i32Errors & UART_DR_FE) ui16SerialState |= USB_CDC_SERIAL_STATE_FRAMING;
+        if(i32Errors & UART_DR_BE) ui16SerialState |= USB_CDC_SERIAL_STATE_BREAK;
+
+        // Call the CDC driver to notify the state change.
+        USBDCDCSerialStateChange((void *)psDevice, ui16SerialState);
+    }
+}
+
+//*****************************************************************************
+//
+// Read as many characters from the UART FIFO as we can and move them into
+// the CDC transmit buffer.
+//
+// \return Returns UART error flags read during data reception.
+//
+//*****************************************************************************
+static int32_t ReadUARTData(void) {
+
+    int32_t i32Char, i32Errors;
+    uint8_t ui8Char;
+    uint32_t ui32Space;
+
+    i32Errors = 0;
+    ui32Space = USBBufferSpaceAvailable((tUSBBuffer *)&g_sTxBuffer);
+
+    while(ui32Space && UARTCharsAvail(USB_UART_BASE)) {
+        i32Char = UARTCharGetNonBlocking(USB_UART_BASE);
+
+        if(!(i32Char & ~0xFF)) {
+            ui8Char = (uint8_t)(i32Char & 0xFF);
+            USBBufferWrite((tUSBBuffer *)&g_sTxBuffer,
+                           (uint8_t *)&ui8Char, 1);
+
+            ui32Space--;
+        }
+        else
+        {
+#ifdef DEBUG
+            g_ui32UARTRxErrors++;
+#endif
+            i32Errors |= i32Char;
+        }
+
+        g_ui32UARTRxCount++;
+    }
+
+    return(i32Errors);
+}
+
+//*****************************************************************************
+//
+// Take as many bytes from the transmit buffer as we have space for and move
+// them into the USB UART's transmit FIFO.
+//
+//*****************************************************************************
+static void USBUARTPrimeTransmit(uint32_t ui32Base) {
+
+    uint32_t ui32Read;
+    uint8_t ui8Char;
+
+    if ( g_bSendingBreak) {
+        return;
+    }
+
+    while(UARTSpaceAvail(ui32Base)) {
+        ui32Read = USBBufferRead((tUSBBuffer *)&g_sRxBuffer, &ui8Char, 1);
+
+        if(ui32Read) {
+            UARTCharPutNonBlocking(ui32Base, ui8Char);
+            g_ui32UARTTxCount++;
+        } else {
+            return;
+        }
+    }
+}
+
+//*****************************************************************************
+//
+// Interrupt handler for the system tick counter.
+//
+//*****************************************************************************
+void SysTickIntHandler(void) {
+    //
+    // Update our system time.
+    //
+    g_ui32SysTickCount++;
+}
+
+
+//*****************************************************************************
+//
+// Set the state of the RS232 RTS and DTR signals.
+//
+//*****************************************************************************
+static void SetControlLineState(uint16_t ui16State) {
+    //
+    // TODO: If configured with GPIOs controlling the handshake lines,
+    // set them appropriately depending upon the flags passed in the wValue
+    // field of the request structure passed.
+    //
+}
+
+//*****************************************************************************
+//
+// Set the communication parameters to use on the UART.
+//
+//*****************************************************************************
+static bool SetLineCoding(tLineCoding *psLineCoding) {
+
+    uint32_t ui32Config;
+    bool bRetcode;
+
+    bRetcode = true;
+
+    switch(psLineCoding->ui8Databits) {
+        case 5: ui32Config = UART_CONFIG_WLEN_5; break;
+        case 6: ui32Config = UART_CONFIG_WLEN_6; break;
+        case 7: ui32Config = UART_CONFIG_WLEN_7; break;
+        case 8: ui32Config = UART_CONFIG_WLEN_8; break;
+
+        default:
+            ui32Config = UART_CONFIG_WLEN_8;
+            bRetcode = false;
+            break;
+    }
+
+    //
+    // Parity.  For any invalid values, we set no parity and return an error.
+    //
+    switch(psLineCoding->ui8Parity) {
+        case USB_CDC_PARITY_NONE: ui32Config |= UART_CONFIG_PAR_NONE; break;
+        case USB_CDC_PARITY_ODD: ui32Config |= UART_CONFIG_PAR_ODD; break;
+        case USB_CDC_PARITY_EVEN: ui32Config |= UART_CONFIG_PAR_EVEN; break;
+        case USB_CDC_PARITY_MARK: ui32Config |= UART_CONFIG_PAR_ONE; break;
+        case USB_CDC_PARITY_SPACE: ui32Config |= UART_CONFIG_PAR_ZERO; break;
+
+        default:
+            ui32Config |= UART_CONFIG_PAR_NONE;
+            bRetcode = false;
+            break;
+    }
+
+    switch(psLineCoding->ui8Stop) {
+        case USB_CDC_STOP_BITS_1: ui32Config |= UART_CONFIG_STOP_ONE; break;
+        case USB_CDC_STOP_BITS_2: ui32Config |= UART_CONFIG_STOP_TWO; break;
+
+        default:
+            ui32Config |= UART_CONFIG_STOP_ONE;
+            bRetcode = false;
+            break;
+    }
+
+    //
+    // Set the UART mode appropriately.
+    //
+    UARTConfigSetExpClk(USB_UART_BASE, SysCtlClockGet(),
+                            psLineCoding->ui32Rate, ui32Config);
+
+    //
+    // Let the caller know if we had a problem or not.
+    //
+    return(bRetcode);
+}
+
+//*****************************************************************************
+//
+// Get the communication parameters in use on the UART.
+//
+//*****************************************************************************
+static void GetLineCoding(tLineCoding *psLineCoding) {
+
+    uint32_t ui32Config;
+    uint32_t ui32Rate;
+
+    UARTConfigGetExpClk(USB_UART_BASE, SysCtlClockGet(), &ui32Rate, &ui32Config);
+    psLineCoding->ui32Rate = ui32Rate;
+
+    switch(ui32Config & UART_CONFIG_WLEN_MASK) {
+        case UART_CONFIG_WLEN_8: psLineCoding->ui8Databits = 8; break;
+        case UART_CONFIG_WLEN_7: psLineCoding->ui8Databits = 7; break;
+        case UART_CONFIG_WLEN_6: psLineCoding->ui8Databits = 6; break;
+        case UART_CONFIG_WLEN_5: psLineCoding->ui8Databits = 5; break;
+    }
+
+    switch(ui32Config & UART_CONFIG_PAR_MASK) {
+        case UART_CONFIG_PAR_NONE: psLineCoding->ui8Parity = USB_CDC_PARITY_NONE; break;
+        case UART_CONFIG_PAR_ODD: psLineCoding->ui8Parity = USB_CDC_PARITY_ODD; break;
+        case UART_CONFIG_PAR_EVEN: psLineCoding->ui8Parity = USB_CDC_PARITY_EVEN; break;
+        case UART_CONFIG_PAR_ONE: psLineCoding->ui8Parity = USB_CDC_PARITY_MARK; break;
+        case UART_CONFIG_PAR_ZERO: psLineCoding->ui8Parity = USB_CDC_PARITY_SPACE; break;
+    }
+
+    //
+    // Translate the configuration stop bits field into the format expected
+    // by the host.
+    //
+    switch(ui32Config & UART_CONFIG_STOP_MASK) {
+        case UART_CONFIG_STOP_ONE: psLineCoding->ui8Stop = USB_CDC_STOP_BITS_1; break;
+        case UART_CONFIG_STOP_TWO: psLineCoding->ui8Stop = USB_CDC_STOP_BITS_2; break;
+    }
+}
+
+//*****************************************************************************
+//
+// This function sets or clears a break condition on the redirected UART RX
+// line.  A break is started when the function is called with \e bSend set to
+// \b true and persists until the function is called again with \e bSend set
+// to \b false.
+//
+//*****************************************************************************
+static void SendBreak(bool bSend) {
+    //
+    // Are we being asked to start or stop the break condition?
+    //
+    if(!bSend) {
+        UARTBreakCtl(USB_UART_BASE, false);
+        g_bSendingBreak = false;
+    } else {
+        UARTBreakCtl(USB_UART_BASE, true);
+        g_bSendingBreak = true;
+    }
+}
+
+//*****************************************************************************
+//
+// Handles CDC driver notifications related to control and setup of the device.
+//
+// \param pvCBData is the client-supplied callback pointer for this channel.
+// \param ui32Event identifies the event we are being notified about.
+// \param ui32MsgValue is an event-specific value.
+// \param pvMsgData is an event-specific pointer.
+//
+// This function is called by the CDC driver to perform control-related
+// operations on behalf of the USB host.  These functions include setting
+// and querying the serial communication parameters, setting handshake line
+// states and sending break conditions.
+//
+// \return The return value is event-specific.
+//
+//*****************************************************************************
+uint32_t ControlHandler(void *pvCBData, uint32_t ui32Event, uint32_t ui32MsgValue, void *pvMsgData) {
+
+    uint32_t ui32IntsOff;
+
+    switch(ui32Event) {
+        //
+        // We are connected to a host and communication is now possible.
+        //
+        case USB_EVENT_CONNECTED:
+            g_bUSBConfigured = true;
+
+            //
+            // Flush our buffers.
+            //
+            USBBufferFlush(&g_sTxBuffer);
+            USBBufferFlush(&g_sRxBuffer);
+
+            //
+            // Tell the main loop to update the display.
+            //
+            ui32IntsOff = IntMasterDisable();
+            g_pcStatus = "Connected";
+            g_ui32Flags |= COMMAND_STATUS_UPDATE;
+            if(!ui32IntsOff)
+            {
+                IntMasterEnable();
+            }
+            break;
+
+        //
+        // The host has disconnected.
+        //
+        case USB_EVENT_DISCONNECTED:
+            g_bUSBConfigured = false;
+            ui32IntsOff = IntMasterDisable();
+            g_pcStatus = "Disconnected";
+            g_ui32Flags |= COMMAND_STATUS_UPDATE;
+            if(!ui32IntsOff)
+            {
+                IntMasterEnable();
+            }
+            break;
+
+        //
+        // Return the current serial communication parameters.
+        //
+        case USBD_CDC_EVENT_GET_LINE_CODING:
+            GetLineCoding(pvMsgData);
+            break;
+
+        //
+        // Set the current serial communication parameters.
+        //
+        case USBD_CDC_EVENT_SET_LINE_CODING:
+            SetLineCoding(pvMsgData);
+            break;
+
+        //
+        // Set the current serial communication parameters.
+        //
+        case USBD_CDC_EVENT_SET_CONTROL_LINE_STATE:
+            SetControlLineState((uint16_t)ui32MsgValue);
+            break;
+
+        //
+        // Send a break condition on the serial line.
+        //
+        case USBD_CDC_EVENT_SEND_BREAK:
+            SendBreak(true);
+            break;
+
+        //
+        // Clear the break condition on the serial line.
+        //
+        case USBD_CDC_EVENT_CLEAR_BREAK:
+            SendBreak(false);
+            break;
+
+        //
+        // Ignore SUSPEND and RESUME for now.
+        //
+        case USB_EVENT_SUSPEND:
+        case USB_EVENT_RESUME:
+            break;
+
+        //
+        // We don't expect to receive any other events.  Ignore any that show
+        // up in a release build or hang in a debug build.
+        //
+        default:
+#ifdef DEBUG
+            while(1);
+#else
+            break;
+#endif
+
+    }
+
+    return(0);
+}
+
+//*****************************************************************************
+//
+// Handles CDC driver notifications related to the transmit channel (data to
+// the USB host).
+//
+// \param ui32CBData is the client-supplied callback pointer for this channel.
+// \param ui32Event identifies the event we are being notified about.
+// \param ui32MsgValue is an event-specific value.
+// \param pvMsgData is an event-specific pointer.
+//
+// This function is called by the CDC driver to notify us of any events
+// related to operation of the transmit data channel (the IN channel carrying
+// data to the USB host).
+//
+// \return The return value is event-specific.
+//
+//*****************************************************************************
+uint32_t TxHandler(void *pvCBData, uint32_t ui32Event, uint32_t ui32MsgValue, void *pvMsgData) {
+
+    switch(ui32Event) {
+        case USB_EVENT_TX_COMPLETE:
+            //
+            // Since we are using the USBBuffer, we don't need to do anything
+            // here.
+            //
+            break;
+
+        //
+        // We don't expect to receive any other events.  Ignore any that show
+        // up in a release build or hang in a debug build.
+        //
+        default:
+#ifdef DEBUG
+            while(1);
+#else
+            break;
+#endif
+
+    }
+    return(0);
+}
+
+//*****************************************************************************
+//
+// Handles CDC driver notifications related to the receive channel (data from
+// the USB host).
+//
+// \param ui32CBData is the client-supplied callback data value for this channel.
+// \param ui32Event identifies the event we are being notified about.
+// \param ui32MsgValue is an event-specific value.
+// \param pvMsgData is an event-specific pointer.
+//
+// This function is called by the CDC driver to notify us of any events
+// related to operation of the receive data channel (the OUT channel carrying
+// data from the USB host).
+//
+// \return The return value is event-specific.
+//
+//*****************************************************************************
+uint32_t RxHandler(void *pvCBData, uint32_t ui32Event, uint32_t ui32MsgValue, void *pvMsgData) {
+
+    uint32_t ui32Count;
+
+    switch(ui32Event) {
+        //
+        // A new packet has been received.
+        //
+        case USB_EVENT_RX_AVAILABLE:
+            //
+            // Feed some characters into the UART TX FIFO and enable the
+            // interrupt so we are told when there is more space.
+            //
+            USBUARTPrimeTransmit(USB_UART_BASE);
+            UARTIntEnable(USB_UART_BASE, UART_INT_TX);
+            break;
+
+        //
+        // We are being asked how much unprocessed data we have still to
+        // process. We return 0 if the UART is currently idle or 1 if it is
+        // in the process of transmitting something. The actual number of
+        // bytes in the UART FIFO is not important here, merely whether or
+        // not everything previously sent to us has been transmitted.
+        //
+        case USB_EVENT_DATA_REMAINING:
+            //
+            // Get the number of bytes in the buffer and add 1 if some data
+            // still has to clear the transmitter.
+            //
+            ui32Count = UARTBusy(USB_UART_BASE) ? 1 : 0;
+            return(ui32Count);
+
+        //
+        // We are being asked to provide a buffer into which the next packet
+        // can be read. We do not support this mode of receiving data so let
+        // the driver know by returning 0. The CDC driver should not be sending
+        // this message but this is included just for illustration and
+        // completeness.
+        //
+        case USB_EVENT_REQUEST_BUFFER:
+            return(0);
+
+        //
+        // We don't expect to receive any other events.  Ignore any that show
+        // up in a release build or hang in a debug build.
+        //
+        default:
+#ifdef DEBUG
+            while(1);
+#else
+            break;
+#endif
+    }
+
+    return(0);
+}
+
+
+#else
+
+void serial_init()
+{
+  // Set baud rate
+  #if BAUD_RATE < 57600
+    uint16_t UBRR0_value = ((F_CPU / (8L * BAUD_RATE)) - 1)/2 ;
+    UCSR0A &= ~(1 << U2X0); // baud doubler off  - Only needed on Uno XXX
+  #else
+    uint16_t UBRR0_value = ((F_CPU / (4L * BAUD_RATE)) - 1)/2;
+    UCSR0A |= (1 << U2X0);  // baud doubler on for high baud rates, i.e. 115200
+  #endif
+  UBRR0H = UBRR0_value >> 8;
+  UBRR0L = UBRR0_value;
+
+  // enable rx and tx
+  UCSR0B |= 1<<RXEN0;
+  UCSR0B |= 1<<TXEN0;
+
+  // enable interrupt on complete reception of a byte
+  UCSR0B |= 1<<RXCIE0;
+
+  // defaults to 8-bit, no parity, 1 stop bit
+}
+
+void serial_tx_trigger() {
+	UCSR0B |=  (1 << UDRIE0);
+}
+
+
+// Data Register Empty Interrupt handler
+ISR(SERIAL_UDRE)
+{
+  uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
+
+  #ifdef ENABLE_XONXOFF
+    if (flow_ctrl == SEND_XOFF) {
+      UDR0 = XOFF_CHAR;
+      flow_ctrl = XOFF_SENT;
+    } else if (flow_ctrl == SEND_XON) {
+      UDR0 = XON_CHAR;
+      flow_ctrl = XON_SENT;
+    } else
+  #endif
+  {
+    // Send a byte from the buffer
+    UDR0 = serial_tx_buffer[tail];
+
+    // Update tail position
+    tail++;
+    if (tail == TX_BUFFER_SIZE) { tail = 0; }
+
+    serial_tx_buffer_tail = tail;
+  }
+
+  // Turn off Data Register Empty Interrupt to stop tx-streaming if this concludes the transfer
+  if (tail == serial_tx_buffer_head) { UCSR0B &= ~(1 << UDRIE0); }
+}
+
+ISR(SERIAL_RX)
+{
+  uint8_t data = UDR0;
+  uint8_t next_head;
+
+  // Pick off runtime command characters directly from the serial stream. These characters are
+  // not passed into the buffer, but these set system state flag bits for runtime execution.
+  switch (data) {
+    case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, EXEC_STATUS_REPORT); break; // Set as true
+    case CMD_CYCLE_START:   bit_true_atomic(sys.execute, EXEC_CYCLE_START); break; // Set as true
+    case CMD_FEED_HOLD:     bit_true_atomic(sys.execute, EXEC_FEED_HOLD); break; // Set as true
+    case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
+    default: // Write character to buffer
+      next_head = serial_rx_buffer_head + 1;
+      if (next_head == RX_BUFFER_SIZE) { next_head = 0; }
+
+      // Write data to buffer unless it is full.
+      if (next_head != serial_rx_buffer_tail) {
+        serial_rx_buffer[serial_rx_buffer_head] = data;
+        serial_rx_buffer_head = next_head;
+
+        #ifdef ENABLE_XONXOFF
+          if ((serial_get_rx_buffer_count() >= RX_BUFFER_FULL) && flow_ctrl == XON_SENT) {
+            flow_ctrl = SEND_XOFF;
+            UCSR0B |=  (1 << UDRIE0); // Force TX
+          }
+        #endif
+
+      }
+      //TODO: else alarm on overflow?
+  }
+}
+
+#endif
+
+// Writes one byte to the TX serial buffer. Called by main program.
+// TODO: Check if we can speed this up for writing strings, rather than single bytes.
+void serial_write(uint8_t data) {
+  // Calculate next head
+  uint8_t next_head = serial_tx_buffer_head + 1;
+  if (next_head == TX_BUFFER_SIZE) { next_head = 0; }
+
+  // Wait until there is space in the buffer
+  while (next_head == serial_tx_buffer_tail) {
+    // TODO: Restructure st_prep_buffer() calls to be executed here during a long print.
+    if (sys.execute & EXEC_RESET) { return; } // Only check for abort to avoid an endless loop.
+  }
+
+  // Store data and advance head
+  serial_tx_buffer[serial_tx_buffer_head] = data;
+  serial_tx_buffer_head = next_head;
+
+  // Enable Data Register Empty Interrupt to make sure tx-streaming is running
+  serial_tx_trigger();
+}
+
+// Fetches the first byte in the serial read buffer. Called by main program.
+uint8_t serial_read()
+{
+  uint8_t tail = serial_rx_buffer_tail; // Temporary serial_rx_buffer_tail (to optimize for volatile)
+  if (serial_rx_buffer_head == tail) {
+    return SERIAL_NO_DATA;
+  } else {
+    uint8_t data = serial_rx_buffer[tail];
+
+    tail++;
+    if (tail == RX_BUFFER_SIZE) { tail = 0; }
+    serial_rx_buffer_tail = tail;
+
+    #ifdef ENABLE_XONXOFF
+      if ((serial_get_rx_buffer_count() < RX_BUFFER_LOW) && flow_ctrl == XOFF_SENT) {
+        flow_ctrl = SEND_XON;
+        UCSR0B |=  (1 << UDRIE0); // Force TX
+      }
+    #endif
+
+    return data;
+  }
+}
+
+
+void serial_reset_read_buffer()
+{
+  serial_rx_buffer_tail = serial_rx_buffer_head;
+
+  #ifdef ENABLE_XONXOFF
+    flow_ctrl = XON_SENT;
+  #endif
+}

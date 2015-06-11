@@ -173,10 +173,20 @@
 #ifdef CPU_MAP_TIVA // (Arduino Uno) Officially supported by Grbl.
 
   // Define serial port pins and interrupt vectors.
-  #define SERIAL_PERI	SYSCTL_PERIPH_UART0
-  #define SERIAL_PORT	  UART0_BASE
   #define SERIAL_RX     USART_RX_vect
   #define SERIAL_UDRE   USART_UDRE_vect
+
+	// serial port definitions
+	#define TIVA_SERIAL_UART_PERI			SYSCTL_PERIPH_UART0
+	#define TIVA_SERIAL_GPIO_PERI			SYSCTL_PERIPH_GPIOA
+
+	#define TIVA_SERIAL_UART				UART0_BASE
+	#define TIVA_SERIAL_PORT				GPIO_PORTA_AHB_BASE
+
+	#define TIVA_SERIAL_RX_PIN				GPIO_PA0_U0RX
+    #define TIVA_SERIAL_TX_PIN				GPIO_PA1_U0TX
+
+	#define TIVA_SERIAL_PINS				(GPIO_PIN_0 | GPIO_PIN_1)
 
   // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
   #define STEP_PERI		SYSCTL_PERIPH_GPIOA
@@ -225,7 +235,7 @@
 #else
     #define Z_LIMIT_BIT    2  // Uno Digital Pin 11
 #endif
-  #define LIMIT_MASK       ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+  #define LIMIT_MASK       (0xff)	//((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
   #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect   PCINT0_vect
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register

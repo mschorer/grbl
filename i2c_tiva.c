@@ -31,11 +31,13 @@
 
 //initialize I2C module 0
 
-uint8_t head = 0;
-uint8_t tail = 0;
-uint8_t sendBuffer[256];
+#define I2C_Q_SIZE	240
 
-#define I2C_BASE	I2C1_BASE
+volatile uint8_t i2c_q_head = 0;
+volatile uint8_t i2c_q_tail = 0;
+uint8_t i2c_q[ I2C_Q_SIZE];
+
+#define I2C_BASE	I2C3_BASE
 
 // simulated registers for comm with imx6
 //t_regStack regStack[NUM_SSI_DATA];
@@ -44,23 +46,26 @@ uint8_t sendBuffer[256];
 
 void TWI_init(void) {
     //enable I2C module 0
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C1);
-    //enable GPIO peripheral that contains I2C 1
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C3);
+    //enable GPIO peripheral that contains I2C 3
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
     SysCtlDelay( 3);
 
     //reset module
-    SysCtlPeripheralReset(SYSCTL_PERIPH_I2C1);
+    SysCtlPeripheralReset(SYSCTL_PERIPH_I2C3);
 
     // Select the I2C function for these pins.
-    GPIOPinTypeI2CSCL(GPIO_PORTA_AHB_BASE, GPIO_PIN_6);
-    GPIOPinTypeI2C(GPIO_PORTA_AHB_BASE, GPIO_PIN_7);
+    GPIOPinTypeI2CSCL(GPIO_PORTD_AHB_BASE, GPIO_PIN_0);
+    GPIOPinTypeI2C(GPIO_PORTD_AHB_BASE, GPIO_PIN_1);
 
-    GPIOPadConfigSet( GPIO_PORTA_AHB_BASE, GPIO_PIN_6 | GPIO_PIN_7, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+//    GPIOPadConfigSet( GPIO_PORTD_AHB_BASE, GPIO_PIN_0 | GPIO_PIN_1, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
     // Configure the pin muxing for I2C0 functions on port B2 and B3.
-    GPIOPinConfigure(GPIO_PA6_I2C1SCL);
-    GPIOPinConfigure(GPIO_PA7_I2C1SDA);
+    GPIOPinConfigure(GPIO_PD0_I2C3SCL);
+    GPIOPinConfigure(GPIO_PD1_I2C3SDA);
+
+    // enable on-chip pullups, just to be sure
+    GPIO_PORTD_AHB_PUR_R |= ( GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 
     // Enable and initialize the I2C0 master module.  Use the system clock for
     // the I2C0 module.  The last parameter sets the I2C data transfer rate.
@@ -68,7 +73,7 @@ void TWI_init(void) {
     // be set to 400kbps.
     I2CMasterInitExpClk(I2C_BASE, SysCtlClockGet(), false);
 
-    I2CIntRegister( I2C_BASE, isrI2C0master);
+    I2CIntRegister( I2C_BASE, isrI2Cmaster);
 
     /* Enable interrupts */
     I2CMasterIntClear( I2C_BASE);
@@ -76,29 +81,38 @@ void TWI_init(void) {
     I2CMasterIntEnableEx( I2C_BASE, I2C_MASTER_INT_MASK);
 
     //clear I2C FIFOs
-    HWREG(I2C_BASE + I2C_O_FIFOCTL) = 80008000;
+//    HWREG(I2C_BASE + I2C_O_FIFOCTL) = 80008000;
 
-    IntEnable( INT_I2C1);
+    IntEnable( INT_I2C3);
 }
 
 bool TWI_tick() {
 	return true;
 }
 
-bool TWI_queue( uint8_t *buf, uint8_t len) {
+bool TWI_queue( uint8_t *buf, uint32_t len) {
 	if ( TWI_isBusy()) return false;
 
-	memcpy( &sendBuffer[ tail], buf, len);
-	tail += len;
+	uint32_t i = 0;
+	while( len--) {
+		i2c_q[ i2c_q_head++] = buf[i];
+		if ( i2c_q_head >= I2C_Q_SIZE) i2c_q_head = 0;
+		i++;
+	}
 
 	return true;
 }
 
 bool TWI_isBusy() {
-	return ( head != tail);
+	return ( i2c_q_head != i2c_q_tail);
 }
 
-void isrI2C0master() {
+void TWI_prep_data() {
+    I2CMasterDataPut(I2C_BASE, i2c_q[ i2c_q_tail++]);
+    if ( i2c_q_tail >= I2C_Q_SIZE) i2c_q_tail = 0;
+}
+
+void isrI2Cmaster() {
 	static volatile uint8_t i2cRegIdx = 0;
 	static volatile uint8_t i2cByteIdx = 0;
 	static volatile uint8_t i2cDEV = 0;
@@ -110,15 +124,30 @@ void isrI2C0master() {
 	bool iState = I2CMasterIntStatus( I2C_BASE, true);
 	I2CMasterIntClear( I2C_BASE);
 
+	uint32_t i2cErr = I2CMasterErr( I2C_BASE);
+
 	uint32_t ixState = I2CMasterIntStatusEx( I2C_BASE, true);
 	I2CMasterIntClearEx( I2C_BASE, ixState);
 
-	switch( ixState) {
-	case I2C_MASTER_INT_DATA:
-        //put last piece of data into I2C FIFO
-        I2CMasterDataPut(I2C_BASE, sendBuffer[ head++]);
+	if ( i2cErr != I2C_MASTER_ERR_NONE) {
+		if ( i2cErr & ( I2C_MASTER_ERR_ADDR_ACK | I2C_MASTER_ERR_DATA_ACK)) {
+			i2c_q_tail = i2c_q_head = 0;
+		}
 
-        switch( tail - head) {
+		if ( i2cErr & ( I2C_MASTER_ERR_ARB_LOST | I2C_MASTER_ERR_CLK_TOUT)) {
+			i2c_q_tail = i2c_q_head = 0;
+		}
+	}
+
+	if ( ixState & I2C_MASTER_INT_TIMEOUT) {
+		i2c_q_tail = i2c_q_head = 0;
+	}
+
+	if ( ixState & I2C_MASTER_INT_DATA) {
+        //put last piece of data into I2C FIFO
+		TWI_prep_data();
+
+        switch( i2c_q_tail - i2c_q_head) {
         case 0:
             //send next data that was just placed into FIFO
             I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
@@ -128,21 +157,8 @@ void isrI2C0master() {
             //send next data that was just placed into FIFO
             I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
         }
-		break;
-
-	case I2C_MASTER_INT_TIMEOUT:
-		tail = head;
-		break;
-
-	case I2C_MASTER_INT_RX_FIFO_REQ:
-		break;
-
-	case I2C_MASTER_INT_TX_FIFO_REQ:
-		break;
-
-	default:
-		;
 	}
+
 }
 
 //sends an array of data via I2C to the specified slave
@@ -152,11 +168,11 @@ void TWI_send(uint8_t slave_addr)
     I2CMasterSlaveAddrSet(I2C_BASE, slave_addr, false);
 
     // send first byte of payload
-    I2CMasterDataPut(I2C_BASE, sendBuffer[ head++]);
+	TWI_prep_data();
 
     //if there is only one argument, we only need to use the
     //single send I2C function
-    if( head == tail) {
+    if( i2c_q_head == i2c_q_tail) {
         //Initiate send of data from the MCU
         I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_SINGLE_SEND);
 

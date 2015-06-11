@@ -32,7 +32,7 @@
 #include "settings.h"
 
 
-void printString(const char *s) {
+void printString( char *s) {
 #ifdef CPU_MAP_TIVA
 	serial_sendString( s);
 #else
@@ -43,7 +43,7 @@ void printString(const char *s) {
 
 
 // Print a string stored in PGM-memory
-void printPgmString(const char *s)
+void printPgmString( char *s)
 {
 #ifdef CPU_MAP_TIVA
 	serial_sendString( s);
@@ -129,7 +129,7 @@ for (; i > 0; i--)
 
 void print_uint32_base10(unsigned long n)
 { 
-	unsigned char buf[12];
+	char buf[12];
 
 #ifdef CPU_MAP_TIVA
     sprintf( buf, "%u", n);
@@ -156,7 +156,7 @@ void print_uint32_base10(unsigned long n)
 void printInteger(long n)
 {
 #ifdef CPU_MAP_TIVA
-	unsigned char buf[16];
+	char buf[16];
 
 	sprintf( buf, "%i", n);
 
@@ -179,11 +179,10 @@ void printInteger(long n)
 // techniques are actually just slightly slower. Found this out the hard way.
 void printFloat(float n, uint8_t decimal_places)
 {
-	uint8_t i = 0;
-	unsigned char buf[10];
+	char buf[10];
 
 #ifdef CPU_MAP_TIVA
-	uint8_t fmt[5];
+	char fmt[5];
 
 	sprintf( fmt, "%%.%if", decimal_places);
     sprintf( buf, fmt, n);

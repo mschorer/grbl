@@ -33,8 +33,7 @@
 	I2C_MASTER_INT_DATA - Data interrupt
 */
 
-#define I2C_MASTER_INT_MASK 0xfff
-//( I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_RX_FIFO_FULL | I2C_MASTER_INT_TX_FIFO_EMPTY | I2C_MASTER_INT_RX_FIFO_REQ | I2C_MASTER_INT_TX_FIFO_REQ | I2C_MASTER_INT_ARB_LOST | I2C_MASTER_INT_STOP | I2C_MASTER_INT_START | I2C_MASTER_INT_NACK)
+#define I2C_MASTER_INT_MASK ( I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_NACK)
 
 // internal "register" space
 #define NUM_SSI_DATA 32
@@ -51,11 +50,11 @@ typedef union {
 void TWI_init();
 bool TWI_tick();
 
-bool TWI_queue(uint8_t *buffer, uint8_t write_bytes);
+bool TWI_queue(uint8_t *buffer, uint32_t write_bytes);
 bool TWI_isBusy();
 void TWI_send( uint8_t adr);
 
-void isrI2C0master();
-void isrI2C0slave();
+void isrI2Cmaster();
+void isrI2Cslave();
 
 #endif /* I2C_TIVA_H_ */

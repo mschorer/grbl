@@ -43,6 +43,7 @@ GLOBAL_INT_VECTOR( isrLimits);
 
 void limits_init() 
 {
+
 	ENABLE_PERIPHERAL( LIMIT_PERI);
 
   GPIO_INPUT_SET( LIMIT_DDR, LIMIT_MASK);	//LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins

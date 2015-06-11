@@ -35,6 +35,15 @@
 
 settings_t settings;
 
+uint32_t strucSize( uint32_t size) {
+	// add crc byte
+	size++;
+
+	// fill to next 32bit word boundary
+	if ( size % 4) size += 4 - (size % 4);
+
+	return size;
+}
 
 // Method to store startup lines into EEPROM
 void settings_store_startup_line(uint8_t n, char *line)
@@ -54,14 +63,14 @@ void settings_store_build_info(char *line)
 // Method to store coord data parameters into EEPROM
 void settings_write_coord_data(uint8_t coord_select, float *coord_data)
 {  
-  uint32_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
+  uint32_t addr = coord_select*strucSize(sizeof(float)*N_AXIS) + EEPROM_ADDR_PARAMETERS;
   memcpy_to_eeprom_with_checksum(addr,(char*)coord_data, sizeof(float)*N_AXIS);
 }  
 
 // Method to store tool parameters into EEPROM
 void settings_write_tool_data(uint8_t tool_select, gc_tools_t *tool_data)
 {
-  uint16_t addr = tool_select*(sizeof(gc_tools_t)+1) + EEPROM_ADDR_TOOLS;
+  uint16_t addr = tool_select*strucSize(sizeof(gc_tools_t)) + EEPROM_ADDR_TOOLS;
   memcpy_to_eeprom_with_checksum(addr,(char*)tool_data, sizeof(gc_tools_t));
 }
 
@@ -143,7 +152,6 @@ void settings_clear_build_info() {
 // Reads startup line from EEPROM. Updated pointed line string data.
 uint8_t settings_read_startup_line(uint8_t n, char *line)
 {
-	uint8_t i;
   uint32_t addr = n*(STARTUP_LINE_SIZE)+EEPROM_ADDR_STARTUP_BLOCK;
   if (!(memcpy_from_eeprom_with_checksum((char*)line, addr, LINE_BUFFER_SIZE))) {
     // Reset line with default value
@@ -171,7 +179,7 @@ uint8_t settings_read_build_info(char *line)
 // Read selected coordinate data from EEPROM. Updates pointed coord_data value.
 uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data)
 {
-  uint32_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
+  uint32_t addr = coord_select*strucSize(sizeof(float)*N_AXIS) + EEPROM_ADDR_PARAMETERS;
   if (!(memcpy_from_eeprom_with_checksum((char*)coord_data, addr, sizeof(float)*N_AXIS))) {
     // Reset with default zero vector
     clear_vector_float(coord_data); 
@@ -185,7 +193,7 @@ uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data)
 // Read selected tool data from EEPROM. Updates pointed coord_data value.
 uint8_t settings_read_tool_data(uint8_t tool_select, gc_tools_t *tool_data)
 {
-  uint16_t addr = tool_select*(sizeof(gc_tools_t)+1) + EEPROM_ADDR_TOOLS;
+  uint16_t addr = tool_select*strucSize( sizeof(gc_tools_t)) + EEPROM_ADDR_TOOLS;
   if (!(memcpy_from_eeprom_with_checksum((char*)tool_data, addr, sizeof(gc_tools_t)))) {
     // Reset with default zero vector
     clear_vector(tool_data);
@@ -332,7 +340,9 @@ void settings_init() {
   // load tool table from eeprom
   uint8_t tool;
   for( tool=1; tool < N_TOOL_TABLE; tool++) {
-	  settings_read_tool_data( tool, &gc_state.tool_table[tool]);
+	  if (!settings_read_tool_data( tool, &gc_state.tool_table[tool])) {
+
+	  }
   }
 
   // NOTE: Startup lines are checked and executed by protocol_main_loop at the end of initialization.

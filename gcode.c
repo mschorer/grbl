@@ -129,7 +129,7 @@ uint8_t gc_execute_line(char *line)
   uint8_t char_counter = 0;  
   char letter;
   float value;
-  uint8_t int_value = 0;
+  int8_t int_value = 0;
   uint8_t mantissa = 0; // NOTE: For mantissa values > 255, variable type must be changed to uint16_t.
 
 
