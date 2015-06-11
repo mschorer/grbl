@@ -3,10 +3,13 @@
 ***
 
 recent changes:
+- supporting native cdc-usb and uart communication
+- partial support for #define-style hardware abstraction (to keep arduino footprint small)
+- more fixes
 - add a branch for the TIVA port
 
 next:
-- class out machine specific code into machine_control.(c/h)
+- more work on hw-abstraction
 - support tool change move
 - support tool length sensor on tool change
 
