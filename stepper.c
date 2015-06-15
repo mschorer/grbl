@@ -174,8 +174,8 @@ static st_prep_t prep;
   triangle(no cruise).
 
                                         maximum_speed (< nominal_speed) ->  + 
-                    +--------+ <- maximum_speed (= nominal_speed)          /|\                                         
-                   /          \                                           / | \                      
+                    +--------+ <- maximum_speed (= nominal_speed)          /|\
+                   /          \                                           / | \
  current_speed -> +            \                                         /  |  + <- exit_speed
                   |             + <- exit_speed                         /   |  |                       
                   +-------------+                     current_speed -> +----+--+                   

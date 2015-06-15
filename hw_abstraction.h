@@ -15,7 +15,6 @@
 
 	#include <inc/hw_memmap.h>
 	#include <inc/hw_gpio.h>
-	#include <inc/hw_memmap.h>
 	#include <inc/hw_types.h>
 	#include <inc/hw_i2c.h>
 //	#include <inc/hw_uart.h>
@@ -25,22 +24,23 @@
 
 	#include <driverlib/gpio.h>
 	#include <driverlib/i2c.h>
-//	#include <driverlib/uart.h>
+	#include <driverlib/uart.h>
 	#include <driverlib/interrupt.h>
 	#include <driverlib/sysctl.h>
 	#include <driverlib/timer.h>
 	#include <driverlib/eeprom.h>
 	#include <driverlib/fpu.h>
 	#include <driverlib/systick.h>
-	#include <driverlib/uart.h>
 	#include <driverlib/pin_map.h>
-
+/*
 	#include "usblib/usblib.h"
 	#include "usblib/usbcdc.h"
 	#include "usblib/usb-ids.h"
 	#include "usblib/device/usbdevice.h"
 	#include "usblib/device/usbdcdc.h"
 	#include "usb_serial_structs.h_"
+*/
+	#define TIVA_SERIAL_UART				UART0_BASE
 
 	#define GLOBAL_INT_VECTOR(fname)		void fname()
 	#define ISR_ROUTINE(vect,isr)			void isr()
@@ -74,7 +74,7 @@
 											SysCtlPeripheralEnable( peri); \
 											SysCtlDelay( 3)
 
-	#define TIMER_GET_DELAY_HZ(hz)			((SysCtlClockGet() / hz)/ 2)
+	#define TIMER_GET_DELAY_HZ(hz)			(SysCtlClockGet() / hz)
 	#define TIMER_SETUP( port, timer, reason, to)				/* setup periodic timer */ \
 											TimerConfigure( port, TIMER_CFG_PERIODIC); \
 											TimerLoadSet( port, timer, to); \
@@ -93,9 +93,9 @@
 	#define F_CPU							SysCtlClockGet()
 
 	//TODO add proper timing calculation here
-	#define MSEC_TO_SYSCTL(ms)				( ms * 100000)
-	#define _delay_ms(dly)					SysCtlDelay( dly * 10000)
-	#define _delay_us(dly)					SysCtlDelay( dly * 10)
+	#define MSEC_TO_SYSCTL(ms)				( ms * SysCtlClockGet() / 3000)
+	#define _delay_ms(dly)					SysCtlDelay( dly * SysCtlClockGet() / 3000)
+	#define _delay_us(dly)					SysCtlDelay( dly * SysCtlClockGet() / 3000000)
 	#define pgm_read_byte_near(adr)			((uint8_t) *adr)
 
 	#define PSTR( str)						str
