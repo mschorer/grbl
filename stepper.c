@@ -79,7 +79,7 @@ static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 typedef struct {
   uint16_t n_step;          // Number of step events to be executed for this segment
   uint8_t st_block_index;   // Stepper block data index. Uses this information to execute this segment.
-  uint16_t cycles_per_tick; // Step distance traveled per ISR tick, aka step rate.
+  uint32_t cycles_per_tick; // Step distance traveled per ISR tick, aka step rate.
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     uint8_t amass_level;    // Indicates AMASS level for the ISR to execute this segment
   #else
@@ -839,7 +839,7 @@ void st_prep_buffer()
     prep.dt_remainder = (n_steps_remaining - steps_remaining)*inv_rate; // Update segment partial step time
 
     // Compute CPU cycles per step for the prepped segment.
-    uint32_t cycles = ceil( (TICKS_PER_MICROSECOND*1000000*60)*inv_rate ); // (cycles/step)    
+    uint32_t cycles = ceil( ((float)480000000.0)*inv_rate ); // (cycles/step)
 
     #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING        
       // Compute step timing and multi-axis smoothing level.

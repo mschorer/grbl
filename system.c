@@ -55,7 +55,7 @@ ISR_ROUTINE(PINOUT_INT_vect,isrButtons)	// ISR(PINOUT_INT_vect)
 	uint8_t pinstate = GPIO_READ_MASKED( PINOUT_PIN, PINOUT_MASK);
   if ( pinstate ^ PINOUT_MASK) {		//(PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) {
     if (bit_isfalse( pinstate,bit(PIN_RESET))) {
-      mc_reset();
+//      mc_reset();
     } else {
 		if (bit_isfalse( pinstate,bit(PIN_FEED_HOLD))) bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
 		if (bit_isfalse( pinstate,bit(PIN_CYCLE_START))) bit_true_atomic(sys.execute, EXEC_CYCLE_START);

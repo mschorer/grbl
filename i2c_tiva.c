@@ -48,6 +48,7 @@ void TWI_init(void) {
     //enable I2C module 0
     SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C3);
     //enable GPIO peripheral that contains I2C 3
+	SysCtlGPIOAHBEnable( SYSCTL_PERIPH_GPIOD); \
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
     SysCtlDelay( 3);
 

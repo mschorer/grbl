@@ -206,16 +206,16 @@
   #define DIRECTION_PERI	SYSCTL_PERIPH_GPIOE
   #define DIRECTION_DDR     GPIO_PORTE_AHB_BASE
   #define DIRECTION_PORT    GPIO_PORTE_AHB_BASE
-  #define X_DIRECTION_BIT   2  // Uno Digital Pin 5
-  #define Y_DIRECTION_BIT   3  // Uno Digital Pin 6
-  #define Z_DIRECTION_BIT   4  // Uno Digital Pin 7
+  #define X_DIRECTION_BIT   0  // Uno Digital Pin 5
+  #define Y_DIRECTION_BIT   1  // Uno Digital Pin 6
+  #define Z_DIRECTION_BIT   2  // Uno Digital Pin 7
   #define DIRECTION_MASK    ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
 
   // Define stepper driver enable/disable output pin.
-  #define STEPPERS_DISABLE_PERI		SYSCTL_PERIPH_GPIOD
-  #define STEPPERS_DISABLE_DDR    GPIO_PORTD_AHB_BASE
-  #define STEPPERS_DISABLE_PORT   GPIO_PORTD_AHB_BASE
-  #define STEPPERS_DISABLE_BIT    0  // Uno Digital Pin 8
+  #define STEPPERS_DISABLE_PERI		SYSCTL_PERIPH_GPIOC
+  #define STEPPERS_DISABLE_DDR    GPIO_PORTC_AHB_BASE
+  #define STEPPERS_DISABLE_PORT   GPIO_PORTC_AHB_BASE
+  #define STEPPERS_DISABLE_BIT    7  // Uno Digital Pin 8
   #define STEPPERS_DISABLE_MASK   (1<<STEPPERS_DISABLE_BIT)
 
   // Define homing/hard limit switch input pins and limit interrupt vectors.
@@ -293,7 +293,7 @@
   #define PINOUT_INT       PCIE1  // Pin change interrupt enable pin
   #define PINOUT_INT_vect  PCINT1_vect
   #define PINOUT_PCMSK     PCMSK1 // Pin change interrupt register
-  #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
+  #define PINOUT_MASK ((1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))		// (1<<PIN_RESET)|
 
   // Define probe switch input pin.
   #define PROBE_PERI		SYSCTL_PERIPH_GPIOC
@@ -303,11 +303,11 @@
   #define PROBE_BIT       4  // Uno Digital Pin 12
   #define PROBE_MASK      (1<<PROBE_BIT)
 
-  #define READY_PERI		SYSCTL_PERIPH_GPIOC
-  #define READY_DDR       GPIO_PORTC_AHB_BASE
-  #define READY_PIN       GPIO_PORTC_AHB_BASE
-  #define READY_PORT      GPIO_PORTC_AHB_BASE
-  #define PIN_READY       7  // Uno Analog Pin 3
+  #define READY_PERI		SYSCTL_PERIPH_GPIOD
+  #define READY_DDR       GPIO_PORTD_AHB_BASE
+  #define READY_PIN       GPIO_PORTD_AHB_BASE
+  #define READY_PORT      GPIO_PORTD_AHB_BASE
+  #define PIN_READY       2  // Uno Analog Pin 3
 
 #if ( SPINDLE_CTRL == CTRL_PIN)
   #ifdef VARIABLE_SPINDLE

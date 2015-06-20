@@ -20,7 +20,7 @@
 //	#include <inc/hw_uart.h>
 	#include <inc/hw_timer.h>
 	#include <inc/hw_sysctl.h>
-	#include <inc/hw_eeprom.h>
+//	#include <inc/hw_eeprom.h>
 
 	#include <driverlib/gpio.h>
 	#include <driverlib/i2c.h>
