@@ -11,6 +11,8 @@
 #include "config.h"
 
 #ifdef CPU_MAP_TIVA
+	#define TARGET_IS_TM4C123_RB1
+
 	#include <inc/tm4c123gh6zrb.h>
 
 	#include <inc/hw_memmap.h>
@@ -21,6 +23,9 @@
 	#include <inc/hw_timer.h>
 	#include <inc/hw_sysctl.h>
 //	#include <inc/hw_eeprom.h>
+
+	#include <driverlib/rom.h>
+	#include <driverlib/rom_map.h>
 
 	#include <driverlib/gpio.h>
 	#include <driverlib/i2c.h>
@@ -45,8 +50,8 @@
 	#define GLOBAL_INT_VECTOR(fname)		void fname()
 	#define ISR_ROUTINE(vect,isr)			void isr()
 
-	#define GPIO_OUTPUT_SET(port,mask)		GPIOPinTypeGPIOOutput( port, mask)
-	#define GPIO_OUTPUT_STD(port,mask)		GPIOPadConfigSet( port, mask, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD);
+	#define GPIO_OUTPUT_SET(port,mask)		ROM_GPIOPinTypeGPIOOutput( port, mask)
+	#define GPIO_OUTPUT_STD(port,mask)		MAP_GPIOPadConfigSet( port, mask, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD);
 
 	#define GPIO_WRITE_MASKED(port,mask,v)	GPIOPinWrite( port, mask, v)
 

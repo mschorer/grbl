@@ -24,4 +24,10 @@
 		<nature>org.eclipse.cdt.core.ccnature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>TIVAWARE_INSTALL_PATH</name>
+			<value>file:/C:/dev/ti/TivaWare_C_Series-2.1.1.71</value>
+		</variable>
+	</variableList>
 </projectDescription>
