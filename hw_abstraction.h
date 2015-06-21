@@ -13,7 +13,7 @@
 #ifdef CPU_MAP_TIVA
 	#define TARGET_IS_TM4C123_RB1
 
-	#include <inc/tm4c123gh6zrb.h>
+	#include <inc/tm4c123gh6pm.h>
 
 	#include <inc/hw_memmap.h>
 	#include <inc/hw_gpio.h>
