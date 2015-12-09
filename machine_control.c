@@ -64,28 +64,17 @@ bool mctrl_flush()
 
 	if ( TWI_isBusy()) return false;
 
-	TWI_queue( mctrl_cmd_buf, mctrl_cmd_len);
-	TWI_queue( mctrl_msg_buf, mctrl_msg_len);
-	
-	TWI_send( MCTRL_I2C_ADDR);
-/*
-
-	uint8_t idx;
-	for( idx=0; idx < mctrl_cmd_len; idx++) {
-		TWI_buffer_out[ idx] = mctrl_cmd_buf[ idx];
-	}
-	
-	for( i = 0; i < mctrl_msg_len; i++, idx++) {
-		TWI_buffer_out[ idx] = mctrl_msg_buf[ i];
-	}
-	
-	if ( idx > 0) {
-		TWI_queue( MCTRL_I2C_ADDR, idx);
-
+	if (mctrl_cmd_len) {
+		TWI_post( MCTRL_I2C_ADDR, mctrl_cmd_buf, mctrl_cmd_len);
 		mctrl_cmd_len = 0;
+	}
+	if (mctrl_msg_len) {
+		TWI_post( MCTRL_I2C_ADDR, mctrl_msg_buf, mctrl_msg_len);
 		mctrl_msg_len = 0;
 	}
-*/
+	
+	TWI_triggerSend();
+
 	return true;
 }
 

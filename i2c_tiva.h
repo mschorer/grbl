@@ -14,6 +14,13 @@
 
 #define SLAVE_OWN_ADDRESS	0x5C
 
+//#define I2C_Q_SIZE	240
+#define I2C_BASE	I2C0_BASE
+
+#define I2C_DIR_MASK		0x01
+#define I2C_WRITE			0x00
+#define I2C_READ			0x01
+
 // I2C int sources
 //#define I2C_INT_MASK ( I2C_SLAVE_INT_START | I2C_SLAVE_INT_STOP | I2C_SLAVE_INT_DATA | I2C_SLAVE_INT_RX_FIFO_FULL | I2C_SLAVE_INT_TX_FIFO_EMPTY | I2C_SLAVE_INT_RX_FIFO_REQ | I2C_SLAVE_INT_TX_FIFO_REQ | I2C_SLAVE_INT_TX_DMA_DONE | I2C_SLAVE_INT_RX_DMA_DONE)
 #define I2C_SLAVE_INT_MASK ( I2C_SLAVE_INT_DATA)	// | I2C_SLAVE_INT_START | I2C_SLAVE_INT_STOP )
@@ -33,7 +40,7 @@
 	I2C_MASTER_INT_DATA - Data interrupt
 */
 
-#define I2C_MASTER_INT_MASK ( I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_NACK)
+#define I2C_MASTER_INT_MASK ( I2C_MASTER_INT_START | I2C_MASTER_INT_STOP | I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_NACK)
 
 // internal "register" space
 #define NUM_SSI_DATA 32
@@ -45,14 +52,39 @@ typedef union {
 	float f;
 } t_regStack;
 
+#define I2C_OPQ_SIZE	16
+
+typedef struct {
+	uint8_t cmd;
+	uint8_t* data;
+	uint32_t len;
+	void (*complete)( uint8_t* data, uint32_t len);
+} t_i2cTransfer;
+
+typedef struct {
+	t_i2cTransfer* packet;
+	int32_t didx;
+} t_i2cStatus;
+
+typedef struct {
+	uint32_t head;
+	uint32_t tail;
+	t_i2cTransfer ops[ I2C_OPQ_SIZE];
+} t_i2cOpQueue;
+
+
 //---------------------------------------------------------------------------------
 
 void TWI_init();
 bool TWI_tick();
 
-bool TWI_queue(uint8_t *buffer, uint32_t write_bytes);
+t_i2cTransfer* TWI_putQueue( t_i2cTransfer* op);
+t_i2cTransfer* TWI_fetchQueue();
+
+//bool TWI_queue(uint8_t *buffer, uint32_t write_bytes);
 bool TWI_isBusy();
-void TWI_send( uint8_t adr);
+bool TWI_post( uint8_t adr, uint8_t *buffer, uint32_t write_bytes);
+bool TWI_triggerSend();
 
 void isrI2Cmaster();
 void isrI2Cslave();

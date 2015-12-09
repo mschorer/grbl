@@ -223,8 +223,8 @@ void st_wake_up()
 
     // Enable Stepper Driver Interrupt
 //    TIMSK1 |= (1<<OCIE1A);
-      TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_A, 100);
-      TIMER_ENABLE( TIMER_STEP_PORT, TIMER_STEP_A);
+      TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_PERIOD, 100);
+      TIMER_ENABLE( TIMER_STEP_PORT, TIMER_STEP_PERIOD);
   }
 }
 
@@ -235,7 +235,7 @@ void st_go_idle()
   // Disable Stepper Driver Interrupt. Allow Stepper Port Reset Interrupt to finish, if active.
 //  TIMSK1 &= ~(1<<OCIE1A); // Disable Timer1 interrupt
 //  TCCR1B = (TCCR1B & ~((1<<CS12) | (1<<CS11))) | (1<<CS10); // Reset clock to no prescaling.
-  TIMER_DISABLE( TIMER_STEP_PORT, TIMER_STEP_A);
+  TIMER_DISABLE( TIMER_STEP_PORT, TIMER_STEP_PERIOD);
 
   busy = false;
   
@@ -332,8 +332,8 @@ ISR_ROUTINE( TIMER_STEP_VECTA, isrStep)
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   //TCNT0 = st.step_pulse_time; // Reload Timer0 counter
   //TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
-  TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_B, st.step_pulse_time);
-  TIMER_ENABLE( TIMER_STEP_PORT, TIMER_STEP_B);
+  TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_PULSE, st.step_pulse_time);
+  TIMER_ENABLE( TIMER_STEP_PORT, TIMER_STEP_PULSE);
 
   busy = true;
   //sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
@@ -353,7 +353,7 @@ ISR_ROUTINE( TIMER_STEP_VECTA, isrStep)
 
       // Initialize step segment timing per step and load number of steps to execute.
       //OCR1A = st.exec_segment->cycles_per_tick;
-      TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_A, st.exec_segment->cycles_per_tick);
+      TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_PERIOD, st.exec_segment->cycles_per_tick);
 
       st.step_count = st.exec_segment->n_step; // NOTE: Can sometimes be zero when moving slow.
       // If the new segment starts a new planner block, initialize stepper variables and counters.
@@ -464,7 +464,7 @@ ISR_ROUTINE(TIMER_STEP_VECTB, isrReset)
   GPIO_WRITE_MASKED( STEP_PORT, STEP_MASK, (step_port_invert_mask & STEP_MASK));
 
   // TCCR0B = 0; // Disable Timer0 to prevent re-entering this interrupt when it's not needed.
-  TIMER_DISABLE( TIMER_STEP_PORT, TIMER_STEP_B);
+  TIMER_DISABLE( TIMER_STEP_PORT, TIMER_STEP_PULSE);
 }
 #ifdef STEP_PULSE_DELAY
   // This interrupt is used only when STEP_PULSE_DELAY is enabled. Here, the step pulse is
@@ -537,8 +537,8 @@ void stepper_init()
 	GPIO_OUTPUT_SET( DIRECTION_PORT, DIRECTION_MASK);
 	GPIO_OUTPUT_STD( DIRECTION_PORT, DIRECTION_MASK);
 
-	TIMER_ISR_SET( TIMER_STEP_PORT, TIMER_STEP_A, isrStep);
-	TIMER_ISR_SET( TIMER_STEP_PORT, TIMER_STEP_B, isrReset);
+	TIMER_ISR_SET( TIMER_STEP_PORT, TIMER_STEP_PERIOD, isrStep);
+	TIMER_ISR_SET( TIMER_STEP_PORT, TIMER_STEP_PULSE, isrReset);
 
 	TimerConfigure( TIMER_STEP_PORT, TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC | TIMER_CFG_B_ONE_SHOT);
 	TimerIntEnable( TIMER_STEP_PORT, TIMER_TIMA_TIMEOUT | TIMER_TIMB_TIMEOUT);

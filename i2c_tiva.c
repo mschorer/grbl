@@ -31,13 +31,12 @@
 
 //initialize I2C module 0
 
-#define I2C_Q_SIZE	240
+//volatile uint8_t i2c_q_head = 0;
+//volatile uint8_t i2c_q_tail = 0;
+//uint8_t i2c_q[ I2C_Q_SIZE];
 
-volatile uint8_t i2c_q_head = 0;
-volatile uint8_t i2c_q_tail = 0;
-uint8_t i2c_q[ I2C_Q_SIZE];
-
-#define I2C_BASE	I2C3_BASE
+t_i2cOpQueue opQueue;
+volatile t_i2cStatus currOp;
 
 // simulated registers for comm with imx6
 //t_regStack regStack[NUM_SSI_DATA];
@@ -45,28 +44,31 @@ uint8_t i2c_q[ I2C_Q_SIZE];
 //Slightly modified version of TI's example code
 
 void TWI_init(void) {
+	opQueue.head = opQueue.tail = 0;
+	currOp.packet = 0;
+	currOp.didx = 0;
+
     //enable I2C module 0
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C3);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
     //enable GPIO peripheral that contains I2C 3
-	SysCtlGPIOAHBEnable( SYSCTL_PERIPH_GPIOD); \
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     SysCtlDelay( 3);
 
     //reset module
-    SysCtlPeripheralReset(SYSCTL_PERIPH_I2C3);
+    SysCtlPeripheralReset(SYSCTL_PERIPH_I2C0);
 
     // Select the I2C function for these pins.
-    GPIOPinTypeI2CSCL(GPIO_PORTD_AHB_BASE, GPIO_PIN_0);
-    GPIOPinTypeI2C(GPIO_PORTD_AHB_BASE, GPIO_PIN_1);
+    GPIOPinTypeI2CSCL(GPIO_PORTB_AHB_BASE, GPIO_PIN_2);
+    GPIOPinTypeI2C(GPIO_PORTB_AHB_BASE, GPIO_PIN_3);
 
 //    GPIOPadConfigSet( GPIO_PORTD_AHB_BASE, GPIO_PIN_0 | GPIO_PIN_1, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
     // Configure the pin muxing for I2C0 functions on port B2 and B3.
-    GPIOPinConfigure(GPIO_PD0_I2C3SCL);
-    GPIOPinConfigure(GPIO_PD1_I2C3SDA);
+    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
+    GPIOPinConfigure(GPIO_PB3_I2C0SDA);
 
     // enable on-chip pullups, just to be sure
-    GPIO_PORTD_AHB_PUR_R |= ( GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
+    GPIO_PORTB_AHB_PUR_R |= ( GPIO_PIN_2 | GPIO_PIN_3 );	//| GPIO_PIN_2 | GPIO_PIN_3);
 
     // Enable and initialize the I2C0 master module.  Use the system clock for
     // the I2C0 module.  The last parameter sets the I2C data transfer rate.
@@ -84,13 +86,49 @@ void TWI_init(void) {
     //clear I2C FIFOs
 //    HWREG(I2C_BASE + I2C_O_FIFOCTL) = 80008000;
 
-    IntEnable( INT_I2C3);
+    IntEnable( INT_I2C0);
+}
+
+t_i2cTransfer* TWI_putQueue( t_i2cTransfer* op) {
+	t_i2cTransfer* rc = &opQueue.ops[ opQueue.head];
+
+	if ( op != 0) memcpy( rc, op, sizeof( t_i2cTransfer));
+
+	opQueue.head = (opQueue.head+1) % I2C_OPQ_SIZE;
+
+	if ( opQueue.head == opQueue.tail) {
+		opQueue.tail = (opQueue.tail+1 ) % I2C_OPQ_SIZE;
+	}
+
+	return rc;
+}
+
+t_i2cTransfer* TWI_fetchQueue() {
+	t_i2cTransfer* rc = 0;
+
+	if ( opQueue.head != opQueue.tail) {
+		rc = &opQueue.ops[ opQueue.tail];
+		opQueue.tail = (opQueue.tail+1 ) % I2C_OPQ_SIZE;
+	}
+
+	return rc;
+}
+
+bool TWI_post( uint8_t slave_addr, uint8_t *buf, uint32_t len) {
+	t_i2cTransfer* t = TWI_putQueue( 0);
+
+	t->cmd = slave_addr << 1 | I2C_WRITE;
+	t->data = buf;
+	t->len = len;
+	t->complete = 0;
+
+	return (t != 0);
 }
 
 bool TWI_tick() {
 	return true;
 }
-
+/*
 bool TWI_queue( uint8_t *buf, uint32_t len) {
 	if ( TWI_isBusy()) return false;
 
@@ -103,24 +141,12 @@ bool TWI_queue( uint8_t *buf, uint32_t len) {
 
 	return true;
 }
-
+*/
 bool TWI_isBusy() {
-	return ( i2c_q_head != i2c_q_tail);
-}
-
-void TWI_prep_data() {
-    I2CMasterDataPut(I2C_BASE, i2c_q[ i2c_q_tail++]);
-    if ( i2c_q_tail >= I2C_Q_SIZE) i2c_q_tail = 0;
+	return (( opQueue.head != opQueue.tail) && currOp.packet != 0);
 }
 
 void isrI2Cmaster() {
-	static volatile uint8_t i2cRegIdx = 0;
-	static volatile uint8_t i2cByteIdx = 0;
-	static volatile uint8_t i2cDEV = 0;
-	static volatile uint8_t i2cRW = 0;
-	static volatile uint8_t i2cData = 0;
-	static volatile uint32_t i2cNOCs = 0;
-	// uint32_t i2cStatus;
 
 	bool iState = I2CMasterIntStatus( I2C_BASE, true);
 	I2CMasterIntClear( I2C_BASE);
@@ -132,55 +158,88 @@ void isrI2Cmaster() {
 
 	if ( i2cErr != I2C_MASTER_ERR_NONE) {
 		if ( i2cErr & ( I2C_MASTER_ERR_ADDR_ACK | I2C_MASTER_ERR_DATA_ACK)) {
-			i2c_q_tail = i2c_q_head = 0;
+			currOp.packet = 0;
 		}
 
 		if ( i2cErr & ( I2C_MASTER_ERR_ARB_LOST | I2C_MASTER_ERR_CLK_TOUT)) {
-			i2c_q_tail = i2c_q_head = 0;
+			currOp.packet = 0;
 		}
+
+		TWI_triggerSend();
+	}
+
+	if ( ixState & I2C_MASTER_INT_START) {
+
+	}
+
+	if ( ixState & I2C_MASTER_INT_STOP) {
+		// start next transfer
+		TWI_triggerSend();
 	}
 
 	if ( ixState & I2C_MASTER_INT_TIMEOUT) {
-		i2c_q_tail = i2c_q_head = 0;
+		currOp.packet = 0;
 	}
 
 	if ( ixState & I2C_MASTER_INT_DATA) {
         //put last piece of data into I2C FIFO
-		TWI_prep_data();
+		if (( currOp.packet->cmd & I2C_DIR_MASK) == I2C_READ) {
+			currOp.packet->data[ currOp.didx++] = I2CMasterDataGet(I2C_BASE);
 
-        switch( i2c_q_tail - i2c_q_head) {
-        case 0:
-            //send next data that was just placed into FIFO
-            I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-        	break;
+			if ( currOp.didx == currOp.packet->len) {
+	            //last byte was moved out of the receiver
+	            I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
 
-        default:
-            //send next data that was just placed into FIFO
-            I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
-        }
+	            if ( currOp.packet->complete) {
+	            	currOp.packet->complete( currOp.packet->data, currOp.packet->len);
+	            }
+	            currOp.packet = 0;
+	        } else {
+	            //receive next data
+	            I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+	        }
+		} else {
+			I2CMasterDataPut(I2C_BASE, currOp.packet->data[ currOp.didx++]);
+
+			if ( currOp.didx == currOp.packet->len) {
+	            //send next data that was just placed into FIFO
+	            I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
+
+	            if ( currOp.packet->complete) {
+	            	currOp.packet->complete( currOp.packet->data, currOp.packet->len);
+	            }
+	            currOp.packet = 0;
+	        } else {
+	            //send next data that was just placed into FIFO
+	            I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
+	        }
+		}
 	}
 
 }
 
 //sends an array of data via I2C to the specified slave
-void TWI_send(uint8_t slave_addr)
-{
+bool TWI_triggerSend() {
+
+	if ( opQueue.head == opQueue.tail || currOp.packet != 0) return false;
+
+	currOp.packet = &opQueue.ops[ opQueue.tail];
+	opQueue.tail = ( opQueue.tail+1) % I2C_OPQ_SIZE;
+
     // set slave address
-    I2CMasterSlaveAddrSet(I2C_BASE, slave_addr, false);
+    I2CMasterSlaveAddrSet(I2C_BASE, currOp.packet->cmd >> 1, false);
 
-    // send first byte of payload
-	TWI_prep_data();
+	if (( currOp.packet->cmd & I2C_DIR_MASK) == I2C_READ) {
+		// trigger read, the interrupt will bring in the data
 
-    //if there is only one argument, we only need to use the
-    //single send I2C function
-    if( i2c_q_head == i2c_q_tail) {
-        //Initiate send of data from the MCU
-        I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+		I2CMasterControl(I2C_BASE, ( currOp.packet->len == 0) ? I2C_MASTER_CMD_SINGLE_RECEIVE : I2C_MASTER_CMD_BURST_RECEIVE_START);
+	} else {
+		// put data, trigger send
+		I2CMasterDataPut(I2C_BASE, currOp.packet->data[ currOp.didx++]);
+		I2CMasterControl(I2C_BASE, ( currOp.packet->len == 0) ? I2C_MASTER_CMD_SINGLE_SEND : I2C_MASTER_CMD_BURST_SEND_START);
+	}
 
-    } else {
-        //Initiate send of data from the MCU
-        I2CMasterControl(I2C_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    }
+	return true;
 }
 
 
