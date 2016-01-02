@@ -3,10 +3,11 @@
 ***
 
 recent changes:
-- supporting native cdc-usb and uart communication
-- partial support for #define-style hardware abstraction (to keep arduino footprint small)
-- more fixes
-- add a branch for the TIVA port
+- set up all peripherals for the grbl Boosterpack (spi,pwm,qei: io_extra)
+- set up io expander for fault/sleep/reset on motor drivers (io_mcp23008)
+- adapt cpu_map to grbl boosterpack pins
+- clean up code
+- add INT priorities
 
 next:
 - more work on hw-abstraction
@@ -14,6 +15,9 @@ next:
 - support tool length sensor on tool change
 
 features:
+- supporting native cdc-usb and uart communication
+- partial support for #define-style hardware abstraction (to keep arduino footprint small)
+- add a branch for the TIVA port
 - change i2c protocol (2bytes for speed, 1byte for 7cmds with 16vals)
 - send true rpm values
 - send coolant control, tool changer control
