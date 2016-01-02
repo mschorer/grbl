@@ -67,6 +67,7 @@
 #define STATE_HOLD       bit(5) // Executing feed hold
 // #define STATE_JOG     bit(6) // Jogging mode is unique like homing.
 
+#define SYS_DEBOUNCE_COUNT		6
 
 // Define global system variables
 typedef struct {
@@ -87,6 +88,8 @@ extern uint32_t ui32SysClock;
 
 // Initialize the serial protocol
 void system_init();
+
+void system_tick();
 
 // Executes an internal system command, defined as a string starting with a '$'
 uint8_t system_execute_line(char *line);

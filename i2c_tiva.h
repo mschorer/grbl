@@ -12,19 +12,15 @@
 
 // I2C
 
-#define SLAVE_OWN_ADDRESS	0x5C
-
-//#define I2C_Q_SIZE	240
-#define I2C_BASE	I2C0_BASE
-
 #define I2C_DIR_MASK		0x01
 #define I2C_WRITE			0x00
 #define I2C_READ			0x01
 
-// I2C int sources
-//#define I2C_INT_MASK ( I2C_SLAVE_INT_START | I2C_SLAVE_INT_STOP | I2C_SLAVE_INT_DATA | I2C_SLAVE_INT_RX_FIFO_FULL | I2C_SLAVE_INT_TX_FIFO_EMPTY | I2C_SLAVE_INT_RX_FIFO_REQ | I2C_SLAVE_INT_TX_FIFO_REQ | I2C_SLAVE_INT_TX_DMA_DONE | I2C_SLAVE_INT_RX_DMA_DONE)
-#define I2C_SLAVE_INT_MASK ( I2C_SLAVE_INT_DATA)	// | I2C_SLAVE_INT_START | I2C_SLAVE_INT_STOP )
+// number of pending i2c transfers
+#define I2C_OPQ_SIZE		16
 
+// I2C int sources
+#define I2C_MASTER_INT_MASK ( I2C_MASTER_INT_START | I2C_MASTER_INT_STOP | I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_NACK)
 /*
 	I2C_MASTER_INT_RX_FIFO_FULL - RX FIFO Full interrupt
 	I2C_MASTER_INT_TX_FIFO_EMPTY - TX FIFO Empty interrupt
@@ -40,8 +36,7 @@
 	I2C_MASTER_INT_DATA - Data interrupt
 */
 
-#define I2C_MASTER_INT_MASK ( I2C_MASTER_INT_START | I2C_MASTER_INT_STOP | I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_NACK)
-
+/*
 // internal "register" space
 #define NUM_SSI_DATA 32
 
@@ -51,8 +46,7 @@ typedef union {
 	uint32_t u;
 	float f;
 } t_regStack;
-
-#define I2C_OPQ_SIZE	16
+*/
 
 typedef struct {
 	uint8_t cmd;

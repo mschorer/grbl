@@ -249,9 +249,9 @@
 	#define STATUS_LED_DDR	GPIO_PORTF_AHB_BASE
 	#define STATUS_LED_PORT	GPIO_PORTF_AHB_BASE
 	#define STATUS_LED_IN	GPIO_PORTF_AHB_BASE
-	#define STATUS_LED_RED	1  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-	#define STATUS_LED_BLUE	2  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
-	#define STATUS_LED_GREEN	3  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+	#define STATUS_LED_RED	1	// onboard LED
+	#define STATUS_LED_BLUE	2	// onboard LED
+	#define STATUS_LED_GREEN	3  // onboard LED
 
 	// Define user-control pinouts (cycle start, reset, feed hold) input pins.
 	// NOTE: All pinouts pins must be on the same port and not on a port with other input pins (limits).
@@ -259,7 +259,7 @@
 	#define PINOUT_DDR		GPIO_PORTF_AHB_BASE
 	#define PINOUT_PIN		GPIO_PORTF_AHB_BASE
 	#define PINOUT_PORT		GPIO_PORTF_AHB_BASE
-	#define PIN_RESET		4  // Uno Analog Pin 0
+	#define PIN_RESET		5  // Uno Analog Pin 0
 	#define PIN_FEED_HOLD	0  // Uno Analog Pin 1
 	#define PIN_CYCLE_START	4  // Uno Analog Pin 2
 	#define PINOUT_INT		PCIE1  // Pin change interrupt enable pin
@@ -276,11 +276,23 @@
 	#define PROBE_MASK		(1<<PROBE_BIT)
 
 	#define ESC_PERI		SYSCTL_PERIPH_GPIOC
-	#define ESC_DDR			GPIO_PORTC_AHB_BASE
+	#define ESC_PORT		GPIO_PORTC_AHB_BASE
 	#define ESC_PIN			GPIO_PORTC_AHB_BASE
 	#define ESC_PORT		GPIO_PORTC_AHB_BASE
 	#define ESC_BIT			6
 	#define ESC_MASK		(1<<ESC_BIT)
+
+	#define ESC_WTIMER_PERI	SYSCTL_PERIPH_WTIMER1
+	#define ESC_WTIMER_BASE	WTIMER1_BASE
+	#define ESC_PIN_PWM		WT1CCP0
+
+	#define TIVA_I2C_PERI	SYSCTL_PERIPH_I2C0
+	#define TIVA_I2C_BASE	I2C0_BASE
+	#define TIVA_I2C_PINPERI	SYSCTL_PERIPH_GPIOB
+	#define TIVA_I2C_PINPORT	GPIO_PORTB_AHB_BASE
+	#define TIVA_I2C_SCL	GPIO_PB2_I2C0SCL
+    #define TIVA_I2C_SDA	GPIO_PB3_I2C0SDA
+	#define TIVA_I2C_PINS	(GPIO_PIN_2 | GPIO_PIN_3)
 
 	#define I2CINT_PERI		SYSCTL_PERIPH_GPIOC
 	#define I2CINT_DDR		GPIO_PORTC_AHB_BASE
@@ -288,18 +300,30 @@
 	#define I2CINT_PORT		GPIO_PORTC_AHB_BASE
 	#define I2CINT_BIT		5  // Uno Analog Pin 3
 	#define I2CINT_MASK		(1<<I2CINT_BIT)
+	#define I2CINT_vect		INT_I2C0
 
-	#define SPI_PERI		SYSCTL_PERIPH_GPIOD
-	#define SPI_DDR			GPIO_PORTD_AHB_BASE
-	#define SPI_PIN			GPIO_PORTD_AHB_BASE
-	#define SPI_PORT		GPIO_PORTD_AHB_BASE
+	#define SPI_GPIO_PERI	SYSCTL_PERIPH_GPIOD
+	#define SPI_PERI		SYSCTL_PERIPH_SSI1
+	#define SPI_PORT		SSI1_BASE
+	#define SPI_GPIO_PORT	GPIO_PORTD_AHB_BASE
 	#define SPI_MASK		((1<<0)|(1<<1)|(1<<2)|(1<<3))
 
-	#define QEI_PERI		SYSCTL_PERIPH_GPIOD
-	#define QEI_DDR			GPIO_PORTD_AHB_BASE
-	#define QEI_PIN			GPIO_PORTD_AHB_BASE
-	#define QEI_PORT		GPIO_PORTD_AHB_BASE
+	#define QEI_GPIO_PERI	SYSCTL_PERIPH_GPIOD
+	#define QEI_PERI		SYSCTL_PERIPH_QEI0
+	#define QEI_PORT		QEI0_BASE
+	#define QEI_GPIO_PORT	GPIO_PORTD_AHB_BASE
 	#define QEI_MASK		((1<<6)|(1<<7))
+
+	// priorities for interrupts
+	#define IRQPRIO_MOTION		0
+	#define IRQPRIO_MPULSE		0
+	#define IRQPRIO_LIMIT		1
+	#define IRQPRIO_FAULT		1
+	#define IRQPRIO_SERIAL		2
+	#define IRQPRIO_I2C			2
+	#define IRQPRIO_SSI			3
+	#define IRQPRIO_QEI			4
+	#define IRQPRIO_LED			5
 
 #endif
 

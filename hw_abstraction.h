@@ -56,8 +56,10 @@
 	#define GPIO_WRITE_MASKED(port,mask,v)	GPIOPinWrite( port, mask, v)
 
 	#define GPIO_INPUT_SET(port,mask)		GPIOPinTypeGPIOInput( port, mask)
-	#define GPIO_INPUT_STD(port,mask)		GPIOPadConfigSet( port, mask, 0, GPIO_PIN_TYPE_STD)
-	#define GPIO_INPUT_INV(port,mask)		GPIOPadConfigSet( port, mask, 0, GPIO_PIN_TYPE_STD)
+	#define GPIO_INPUT_STD(port,mask)		GPIOPadConfigSet( port, mask, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD)
+	#define GPIO_INPUT_INV(port,mask)		GPIOPadConfigSet( port, mask, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD)
+
+	#define GPIO_INPUT_WPU(port,mask)		GPIOPadConfigSet( port, mask, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU)
 
 	#define GPIO_READ_MASKED(port,mask)		GPIOPinRead( port, mask)
 
@@ -67,6 +69,8 @@
 	#define GPIO_INT_DISABLE(port,mask)		GPIOIntDisable(port,mask)
 
 	#define GPIO_INT_BOTH(port,mask)		GPIOIntTypeSet( port, mask, GPIO_BOTH_EDGES)
+	#define GPIO_INT_FALLING(port,mask)		GPIOIntTypeSet( port, mask, GPIO_FALLING_EDGE)
+	#define GPIO_INT_RISING(port,mask)		GPIOIntTypeSet( port, mask, GPIO_RISING_EDGE)
 
 	#define GPIO_INT_CLEAR(port)			GPIOIntClear( port, GPIOIntStatus( port, true))
 

@@ -33,6 +33,8 @@ void probe_init()
 
 	GPIO_INPUT_SET( PROBE_DDR,PROBE_MASK);
 
+	GPIOPadConfigSet( PROBE_PORT, PROBE_MASK, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
 	// PROBE_DDR &= ~(PROBE_MASK); // Configure as input pins
   if (bit_istrue(settings.flags,BITFLAG_INVERT_PROBE_PIN)) { 
 	  GPIO_INPUT_STD( PROBE_PORT,PROBE_MASK);	//PROBE_PORT &= ~(PROBE_MASK); // Normal low operation. Requires external pull-down.

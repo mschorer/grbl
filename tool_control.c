@@ -28,14 +28,12 @@
 
 volatile uint8_t selected_tool = 0;
 
-void tools_init()
-{
+void tools_init() {
 	tool_change( 0);
 }
 
 
-void tool_select( uint8_t index)
-{
+void tool_select( uint8_t index) {
   if (sys.state == STATE_CHECK_MODE) return;
   
   selected_tool = index & 0x0f;
@@ -44,12 +42,12 @@ void tool_select( uint8_t index)
 }
 
 
-void tool_change( uint8_t index)
-{
+void tool_change( /*uint8_t index*/) {
+
   if (sys.state == STATE_CHECK_MODE) return;
   
-  tool_select( index);
+  //tool_select( index);
 
   mctrl_queueCmd( CMD_M6);
-  mctrl_queueMsgTool( index);
+  mctrl_queueMsgTool( selected_tool);
 }

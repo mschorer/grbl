@@ -63,6 +63,7 @@ bool mctrl_flush()
 	// uint8_t i;
 
 	if ( TWI_isBusy()) return false;
+	if (( mctrl_cmd_len == 0) && ( mctrl_msg_len == 0)) return true;
 
 	if (mctrl_cmd_len) {
 		TWI_post( MCTRL_I2C_ADDR, mctrl_cmd_buf, mctrl_cmd_len);
@@ -95,7 +96,9 @@ void mctrl_queueMsgTool( uint8_t tidx) {
   mctrl_queueMsgChar( CMD_MESSAGE);
   
   mctrl_queueMsgChar( 'T');
-  mctrl_queueMsgChar( 48 + tidx);
+  if ( tidx >= 10) mctrl_queueMsgChar( 49);
+  mctrl_queueMsgChar( 48 + (tidx % 10));
+
   mctrl_queueMsgString( " R");
   mctrl_queueMsgFloat( gc_state.tool_table[tidx].r, 2);
   mctrl_queueMsgString( "\nX");

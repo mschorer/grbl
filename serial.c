@@ -237,8 +237,11 @@ void serial_init() {
     UARTTxIntModeSet( TIVA_SERIAL_UART, UART_TXINT_MODE_FIFO);
 
     UARTIntRegister( TIVA_SERIAL_UART, isrUart);
-    IntEnable(INT_UART0);
     UARTIntEnable(TIVA_SERIAL_UART, UART_INT_RX | UART_INT_RT | UART_INT_TX);
+
+	IntPrioritySet( INT_UART0, IRQPRIO_SERIAL);
+
+    IntEnable(INT_UART0);
 }
 
 uint32_t serial_strLength( char *data) {

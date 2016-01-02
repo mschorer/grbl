@@ -35,6 +35,6 @@ void tools_init();
 void tool_select(uint8_t index);
 
 // perform change
-void tool_change(uint8_t index);
+void tool_change(/*uint8_t index*/);
 
 #endif

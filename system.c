@@ -27,6 +27,10 @@
 
 GLOBAL_INT_VECTOR( isrButtons);
 
+volatile int32_t sysDebounceStart = -1;
+volatile int32_t sysDebounceStop = -1;
+volatile int32_t sysDebounceReset = -1;
+
 void system_init() 
 {
 //  PINOUT_DDR &= ~(PINOUT_MASK); // Configure as input pins
@@ -35,11 +39,20 @@ void system_init()
 //  PCICR |= (1 << PINOUT_INT);   // Enable Pin Change Interrupt
 
 	ENABLE_PERIPHERAL( PINOUT_PERI);
-  GPIO_INPUT_SET( PINOUT_DDR, PINOUT_MASK);	//LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
-  GPIO_INPUT_INV( PINOUT_PORT,PINOUT_MASK);	//LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
-  GPIO_ISR_SET( PINOUT_PORT, PINOUT_INT_vect, isrButtons);
-  GPIO_INT_ENABLE(PINOUT_PORT,PINOUT_MASK);
-  GLOBAL_INT_ENABLE( PINOUT_INT);
+
+	HWREG( PINOUT_PORT + GPIO_O_LOCK) = GPIO_LOCK_KEY;
+	HWREG( PINOUT_PORT + GPIO_O_CR) |= 1<<0;
+
+	GPIO_INPUT_SET( PINOUT_PORT, PINOUT_MASK);
+	GPIO_INPUT_WPU( PINOUT_PORT, PINOUT_MASK);
+
+	GPIO_ISR_SET( PINOUT_PORT, PINOUT_INT_vect, isrButtons);
+	GPIO_INT_BOTH( PINOUT_PORT, PINOUT_MASK);
+	GPIO_INT_ENABLE( PINOUT_PORT, PINOUT_MASK);
+
+	GLOBAL_INT_ENABLE( PINOUT_INT);
+
+	HWREG( PINOUT_PORT + GPIO_O_LOCK) = 0;
 }
 
 
@@ -53,14 +66,53 @@ ISR_ROUTINE(PINOUT_INT_vect,isrButtons)	// ISR(PINOUT_INT_vect)
 
   // Enter only if any pinout pin is actively low.
 	uint8_t pinstate = GPIO_READ_MASKED( PINOUT_PIN, PINOUT_MASK);
-  if ( pinstate ^ PINOUT_MASK) {		//(PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) {
-    if (bit_isfalse( pinstate,bit(PIN_RESET))) {
+
+//  if ( pinstate ^ PINOUT_MASK) {		//(PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) {
+    if ( false && bit_isfalse( pinstate,bit(PIN_RESET))) {
+    	if ( sysDebounceReset < 0) sysDebounceReset = 0;
 //      mc_reset();
     } else {
-		if (bit_isfalse( pinstate,bit(PIN_FEED_HOLD))) bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
-		if (bit_isfalse( pinstate,bit(PIN_CYCLE_START))) bit_true_atomic(sys.execute, EXEC_CYCLE_START);
-    } 
+      	sysDebounceReset = -1;
+//		if (bit_isfalse( pinstate,bit(PIN_FEED_HOLD))) bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
+//		if (bit_isfalse( pinstate,bit(PIN_CYCLE_START))) bit_true_atomic(sys.execute, EXEC_CYCLE_START);
+
+		if (bit_isfalse( pinstate,bit(PIN_FEED_HOLD))) {
+			if ( sysDebounceStop < 0) sysDebounceStop = 0;
+		} else sysDebounceStop = -1;
+
+		if (bit_isfalse( pinstate,bit(PIN_CYCLE_START))) {
+			if ( sysDebounceStart < 0) sysDebounceStart = 0;
+		} else sysDebounceStart = -1;
+    }
+    /*
+  } else {
+  	sysDebounceReset = -1;
+	sysDebounceStart = -1;
+	sysDebounceStop = -1;
   }
+  */
+}
+
+void system_tick() {
+	uint8_t pinstate = GPIO_READ_MASKED( PINOUT_PIN, PINOUT_MASK);
+
+	if ( sysDebounceReset >= 0) sysDebounceReset++;
+	if ( false && sysDebounceReset > SYS_DEBOUNCE_COUNT) {
+		mc_reset();
+		return;
+	}
+
+	if ( sysDebounceStop >= 0) sysDebounceStop++;
+	if ( sysDebounceStop > SYS_DEBOUNCE_COUNT) {
+		bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
+		sysDebounceStop = -1;
+	}
+
+	if ( sysDebounceStart >= 0) sysDebounceStart++;
+	if ( sysDebounceStart > SYS_DEBOUNCE_COUNT) {
+		bit_true_atomic(sys.execute, EXEC_CYCLE_START);
+		sysDebounceStart = -1;
+	}
 }
 
 

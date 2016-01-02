@@ -907,7 +907,7 @@ uint8_t gc_execute_line(char *line)
 
 	gc_state.tool_current = gc_state.tool_changer_slot;
 	// send tool change command
-	tool_change( gc_state.tool_current);
+	tool_change( /*gc_state.tool_current*/);
   }
 
   // [4. Set spindle speed ]:

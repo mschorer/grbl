@@ -54,9 +54,15 @@ void limits_init()
 	  GPIO_INPUT_INV( LIMIT_PORT,LIMIT_MASK);	//LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
   }
 
+  GPIOPadConfigSet( LIMIT_PORT, LIMIT_MASK, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
 	  GPIO_ISR_SET( LIMIT_PORT, LIMIT_INT_vect, isrLimits);
-	  GPIO_INT_ENABLE(LIMIT_PORT,LIMIT_MASK);
+	  GPIO_INT_FALLING( LIMIT_PORT, LIMIT_MASK);
+
+	  IntPrioritySet( INT_GPIOB, IRQPRIO_LIMIT);
+
+	  GPIO_INT_ENABLE( LIMIT_PORT, LIMIT_MASK);
 	  GLOBAL_INT_ENABLE( LIMIT_INT);
 
 	  // LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt

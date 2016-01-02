@@ -203,6 +203,14 @@ void protocol_execute_runtime()
           // to do what is needed before resetting, like killing the incoming stream. The 
           // same could be said about soft limits. While the position is not lost, the incoming
           // stream could be still engaged and cause a serious crash if it continues afterwards.
+
+		    if ( (rt_exec & EXEC_CYCLE_START) && bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) {
+			    // Only perform homing if Grbl is idle or lost.
+			    mc_homing_cycle();
+			    if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
+			    sys.auto_start = false; // Disable planner auto start upon feed hold.
+			}
+
         } while (bit_isfalse(sys.execute,EXEC_RESET));
 
       // Standard alarm event. Only abort during motion qualifies.
@@ -226,7 +234,7 @@ void protocol_execute_runtime()
       report_realtime_status();
       bit_false_atomic(sys.execute,EXEC_STATUS_REPORT);
     }
-/*    
+/*
     // trigger homing
     if (( rt_exec & ( EXEC_FEED_HOLD | EXEC_CYCLE_START)) == ( EXEC_FEED_HOLD | EXEC_CYCLE_START)) {
 	    if (sys.state == STATE_ALARM) {

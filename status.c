@@ -24,6 +24,7 @@
 #include "settings.h"
 #include "gcode.h"
 #include "machine_control.h"
+#include "system.h"
 
 //volatile uint8_t status_state;
 //volatile uint8_t status_led;
@@ -46,6 +47,7 @@ void status_init()
 
 	TIMER_DISABLE( TIMER_LED_PORT, TIMER_A);
 	TIMER_SETUP( TIMER_LED_PORT, TIMER_A, TIMER_TIMA_TIMEOUT, TIMER_GET_DELAY_HZ( 62));
+	IntPrioritySet( INT_TIMER0A, IRQPRIO_LED);
 	TIMER_ENABLE( TIMER_LED_PORT, TIMER_A);
 /*
 	TCCR2B = 0x00;			//Disable Timer2 while we set it up
@@ -67,6 +69,7 @@ ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
 	TIMER_INT_CLEAR( TIMER_LED_PORT);
 
 	mctrl_tick();
+	system_tick();
 	
 	status_ticks--;
 	if ( status_ticks == 0) {
