@@ -19,6 +19,8 @@
 // number of pending i2c transfers
 #define I2C_OPQ_SIZE		16
 
+#define I2C_DATA_SIZE		256
+
 // I2C int sources
 #define I2C_MASTER_INT_MASK ( I2C_MASTER_INT_START | I2C_MASTER_INT_STOP | I2C_MASTER_INT_DATA | I2C_MASTER_INT_TIMEOUT | I2C_MASTER_INT_NACK)
 /*
@@ -66,6 +68,12 @@ typedef struct {
 	t_i2cTransfer ops[ I2C_OPQ_SIZE];
 } t_i2cOpQueue;
 
+typedef struct {
+	uint32_t head;
+	uint32_t tail;
+	uint8_t data[ I2C_DATA_SIZE];
+} t_i2cDataBuffer;
+
 
 //---------------------------------------------------------------------------------
 
@@ -76,9 +84,13 @@ t_i2cTransfer* TWI_putQueue( t_i2cTransfer* op);
 t_i2cTransfer* TWI_fetchQueue();
 
 //bool TWI_queue(uint8_t *buffer, uint32_t write_bytes);
-bool TWI_isBusy();
-bool TWI_post( uint8_t adr, uint8_t *buffer, uint32_t write_bytes);
+//bool TWI_isBusy();
+//bool TWI_post( uint8_t adr, uint8_t *buffer, uint32_t write_bytes);
+void TWI_putOp( uint8_t addr, uint8_t dirBit, uint8_t* data, uint32_t len, void (*complete)( uint8_t* data, uint32_t len));
 bool TWI_triggerSend();
+
+uint8_t* TWI_malloc( uint8_t *buffer, uint32_t len);
+bool TWI_free( uint8_t *buffer, uint32_t len);
 
 void isrI2Cmaster();
 void isrI2Cslave();

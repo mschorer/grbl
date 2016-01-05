@@ -36,6 +36,8 @@
 
 #include "hw_abstraction.h"
 
+#include "machine_control.h"
+
 // Homing axis search distance multiplier. Computed by this value times the axis max travel.
 #define HOMING_AXIS_SEARCH_SCALAR  1.5 // Must be > 1 to ensure limit switch will be engaged.
 
@@ -103,6 +105,10 @@ void limits_disable()
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
   ISR_ROUTINE(LIMIT_INT_vect,isrLimits) // DEFAULT: Limit pin change interrupt process.
   {
+	  GPIO_INT_CLEAR( LIMIT_PORT);
+
+	  mctrl_limitStatus( GPIO_READ_MASKED( LIMIT_PORT, LIMIT_MASK));
+
     // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
     // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
     // moves in the planner and serial buffers are all cleared and newly sent blocks will be 

@@ -103,9 +103,9 @@ int main(void)
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
 
+  mctrl_init();
   io_init();
   io_other_init();
-  mctrl_init();
 
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
   sys.abort = true;   // Set abort to complete initialization
@@ -141,7 +141,6 @@ int main(void)
     spindle_init();
     coolant_init();
     tools_init();
-	mctrl_flush();
 	
     limits_init(); 
     probe_init();

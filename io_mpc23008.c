@@ -5,6 +5,8 @@
  *      Author: legscmh
  */
 
+#include <stdio.h>
+
 #include "system.h"
 #include "motion_control.h"
 #include "cpu_map.h"
@@ -15,12 +17,20 @@
 #include "machine_control.h"
 #include "io_mcp23008.h"
 
-// read port
-
-uint8_t mcp_setup[12]	= { 0x00, MCP_MASK_INPUTS, 0x00, MCP_MASK_INPUTS, MCP_MASK_INPUTS, MCP_MASK_INPUTS, 0x00, MCP_MASK_INPUTS, 0x00, 0x00, MCP_MASK_OUTPUTS};
-uint8_t mcp_send[16];
-uint8_t mcp_read[16];
-uint8_t mcp_cmd;
+// chip presets
+uint8_t mcp_setup[12]	= { 0x00,					// start @0
+							MCP_MASK_INPUTS,		// IODIR
+							0x00,					// IPOL
+							MCP_MASK_INPUTS,		// GPINTEN
+							MCP_MASK_INPUTS,		// DEFVAL
+							0x00,					// INTCMP
+							MCP_IOCON_ODR,			// IO_CFG
+							MCP_MASK_INPUTS,		// GPPU
+							0x00,					// INTF
+							0x00,					// INTCAP
+							MCP_MASK_OUTPUTS,		// GPIO
+							MCP_MASK_OUTPUTS		// OLAT
+						};
 
 /*
  * default register values
@@ -48,70 +58,65 @@ void io_init() {
 	GPIOIntDisable( I2CINT_PORT, I2CINT_MASK);
 	GPIOIntTypeSet( I2CINT_PORT, I2CINT_MASK, GPIO_BOTH_EDGES);
 
+	// enable weak pull up, mcp23008 pulls via open drain pin
     GPIOPadConfigSet( I2CINT_PORT, I2CINT_MASK, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
-	GPIOIntRegister( I2CINT_PORT, io_isrFault);
+//	io_setIndex( 0);
+    TWI_putOp( MCP_ADDR, I2C_WRITE, mcp_setup, 12, 0);
+	io_triggerReadInputs();
+
+	TWI_triggerSend();
+
+    GPIOIntRegister( I2CINT_PORT, io_isrFault);
 	GPIOIntClear( I2CINT_PORT, I2CINT_MASK);
 
 	IntPrioritySet( INT_GPIOC, IRQPRIO_FAULT);
 
 	GPIOIntEnable( I2CINT_PORT, I2CINT_MASK);
-
-	io_setIndex( 0);
-	io_sendCmd( MCP_ADDR, true, mcp_setup, 11, 0);
-}
-
-void io_sendCmd( uint8_t addr, bool doWrite, uint8_t* data, uint32_t len, void (*complete)( uint8_t* data, uint32_t len)) {
-	t_i2cTransfer i2t;
-
-	i2t.cmd = addr << 1;
-	i2t.cmd |= doWrite ? I2C_WRITE : I2C_READ;
-	i2t.data = data;
-	i2t.len = len;
-	i2t.complete = complete;
-
-	TWI_putQueue( &i2t);
 }
 
 void io_setIndex( uint8_t reg) {
-	mcp_cmd = reg;
-	io_sendCmd( MCP_ADDR, true, &mcp_cmd, 1, 0);
+	uint8_t mcp_cmd = reg;
+	TWI_putOp( MCP_ADDR, I2C_WRITE, &mcp_cmd, 1, 0);
 }
 
 void io_setSleep( bool sleep) {
-	// set addr to GPIO, as autoinc is enabled the second write goes to OLAT (which is exactly what we want)
-	// "pull reset", write to GPIO
-	// "deactivate reset", write to OLAT
-	mcp_send[0] = MCP_REG_GPIO;
-	mcp_send[1]	= (( 1<<MCP_PIN_RESET) | ( sleep ? 0 : ( 1<<MCP_PIN_SLEEP)));
+	// write to OLAT, pull sleep low
+	uint8_t mcp_buf[2];
 
-	io_sendCmd( MCP_ADDR, true, mcp_send, 2, 0);
+	mcp_buf[0] = MCP_REG_OLAT;
+	mcp_buf[1] = (( 1<<MCP_PIN_RESET) | ( sleep ? 0 : ( 1<<MCP_PIN_SLEEP)));
+
+	TWI_putOp( MCP_ADDR, I2C_WRITE, mcp_buf, 2, 0);
 }
 
 void io_resetFault() {
 	// set addr to GPIO, as autoinc is enabled the second write goes to OLAT (which is exactly what we want)
 	// "pull reset", write to GPIO
 	// "deactivate reset", write to OLAT
-	mcp_send[0] = MCP_REG_GPIO;
-	mcp_send[1]	= (( 0<<MCP_PIN_RESET) | ( 1<<MCP_PIN_SLEEP));
-	mcp_send[2] = (( 1<<MCP_PIN_RESET) | ( 1<<MCP_PIN_SLEEP));
+	uint8_t mcp_buf[3];
 
-	io_sendCmd( MCP_ADDR, true, mcp_send, 3, 0);
+	mcp_buf[0] = MCP_REG_GPIO;
+	mcp_buf[1] = (( 0<<MCP_PIN_RESET) | ( 1<<MCP_PIN_SLEEP));
+	mcp_buf[2] = (( 1<<MCP_PIN_RESET) | ( 1<<MCP_PIN_SLEEP));
+
+	TWI_putOp( MCP_ADDR, I2C_WRITE, mcp_buf, 3, 0);
 }
 
 void io_triggerReadInputs() {
+	uint8_t mcp_buf[1];
+
 	io_setIndex( MCP_REG_GPIO);
-	io_sendCmd( MCP_ADDR, false, mcp_read, 1, io_read_complete);
+	TWI_putOp( MCP_ADDR, I2C_READ, mcp_buf, 1, io_read_complete);
+
+	TWI_triggerSend();
 }
 
 // this is called after the FAULT bits have been read from the io expander
 void io_read_complete( uint8_t* data, uint32_t len) {
-	char msg[16];
-	char axes[6] = "XYZABC";
-	uint8_t i, mask = 0x20;
 
-	if ( data == mcp_read && len == 1) {
-		uint8_t error_bits = mcp_read[0] & MCP_MASK_INPUTS;
+	if ( len == 1) {
+		uint8_t error_bits = data[0] & MCP_MASK_INPUTS;
 
 		if ( error_bits != MCP_MASK_INPUTS) {
 			// raise alarm
@@ -122,17 +127,26 @@ void io_read_complete( uint8_t* data, uint32_t len) {
 
 			// reset drivers
 			io_resetFault();
-
-			strcpy( msg, "FAULT ");
-			for( i = 0; i < 6; i++) {
-				msg[ 6+i] = (data[0] & mask) ? '-' : axes[i];
-				mask >>= 1;
-			}
-			msg[ 6+i] = '\0';
-
-			mctrl_queueMsgString( msg);
 		}
+
+		io_faultStatus( error_bits);
 	}
+}
+
+void io_faultStatus( uint8_t error_bits) {
+	char msg[16];
+	char axes[6] = "XYZABC";
+	uint8_t i, mask = 0x01;
+
+	sprintf( msg, "%cFAULT ", CMD_MESSAGE);
+
+	for( i = 0; i < 6; i++) {
+		msg[ 7+i] = (error_bits & mask) ? '-' : axes[i];
+		mask <<= 1;
+	}
+	msg[ 7+i] = '\0';
+
+	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, 14, 0);
 }
 
 // interrupt handler for the "FAULT" interrupt

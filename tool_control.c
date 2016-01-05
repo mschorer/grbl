@@ -38,7 +38,7 @@ void tool_select( uint8_t index) {
   
   selected_tool = index & 0x0f;
 
-  mctrl_queueCmd( CMD_TX | selected_tool);
+  mctrl_u8Cmd( CMD_TX | selected_tool);
 }
 
 
@@ -48,6 +48,6 @@ void tool_change( /*uint8_t index*/) {
   
   //tool_select( index);
 
-  mctrl_queueCmd( CMD_M6);
-  mctrl_queueMsgTool( selected_tool);
+  mctrl_u8Cmd( CMD_M6);
+  mctrl_msgCmd( selected_tool);
 }

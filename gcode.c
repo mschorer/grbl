@@ -978,10 +978,6 @@ uint8_t gc_execute_line(char *line)
   gc_state.modal.distance = gc_block.modal.distance;
   
   // [18. Set retract mode ]: NOT SUPPORTED
-  
-    // send commands to machine control
-    //
-    mctrl_flush();
 	   
   // [19. Go to predefined position, Set G10, or Set axis offsets ]:
   switch(gc_block.non_modal_command) {

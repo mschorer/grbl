@@ -69,7 +69,7 @@ void spindle_stop()
 	SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low.
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
-	mctrl_queueCmd( CMD_M5);
+	mctrl_u8Cmd( CMD_M5);
 #endif
 }
 
@@ -93,7 +93,7 @@ void spindle_rpm( float rpm)
 	#endif
 #elif ( SPINDLE_CTRL == CTRL_I2C)
 	uint16_t rpm_val = min( 32767, rpm);
-	mctrl_queueCmdInt( CMD_SPINDLE_HI | rpm_val);
+	mctrl_u16Cmd( CMD_SPINDLE_HI | rpm_val);
 #endif
 }
 
@@ -123,8 +123,8 @@ void spindle_mode(uint8_t direction)
 #elif ( SPINDLE_CTRL == CTRL_I2C)
 
 	switch(direction) {
-		case SPINDLE_ENABLE_CW: mctrl_queueCmd( CMD_M3); break;
-		case SPINDLE_ENABLE_CCW: mctrl_queueCmd( CMD_M4); break;
+		case SPINDLE_ENABLE_CW: mctrl_u8Cmd( CMD_M3); break;
+		case SPINDLE_ENABLE_CCW: mctrl_u8Cmd( CMD_M4); break;
 			
 		case SPINDLE_DISABLE:
 		default:

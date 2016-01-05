@@ -45,10 +45,12 @@
  */
 
 void io_init();
-void io_sendCmd( uint8_t addr, bool doWrite, uint8_t* data, uint32_t len, void (*complete)( uint8_t* data, uint32_t len));
-void io_read_complete( uint8_t* data, uint32_t len);
 void io_setIndex( uint8_t reg);
-//void io_triggerReadInputs();
 void io_isrFault();
 void io_setSleep( bool sleep);
+
+void io_triggerReadInputs();
+void io_read_complete( uint8_t* data, uint32_t len);
+
+void io_faultStatus( uint8_t error_bits);
 void io_resetFault();

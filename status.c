@@ -26,6 +26,8 @@
 #include "machine_control.h"
 #include "system.h"
 
+#include "i2c_tiva.h"
+
 //volatile uint8_t status_state;
 //volatile uint8_t status_led;
 volatile uint8_t status_ticks;
@@ -68,8 +70,8 @@ ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
 
 	TIMER_INT_CLEAR( TIMER_LED_PORT);
 
-	mctrl_tick();
 	system_tick();
+	TWI_tick();
 	
 	status_ticks--;
 	if ( status_ticks == 0) {

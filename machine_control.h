@@ -66,19 +66,21 @@ void mctrl_init();
 
 // select tools
 void mctrl_select(uint8_t index);
-
+/*
 // try to send buffer
 bool mctrl_flush();
 
 void mctrl_tick();
-
-void mctrl_queueCmd( uint8_t b);
-void mctrl_queueCmdInt( uint16_t b);
-
+*/
+void mctrl_u8Cmd( uint8_t b);
+void mctrl_u16Cmd( uint16_t b);
+/*
 void mctrl_queueMsgChar( char b);
 void mctrl_queueMsgFloat( float n, uint8_t decimal_places);
 void mctrl_queueMsgString( const char *str);
+*/
+void mctrl_msgCmd( uint8_t toolidx);
 
-void mctrl_queueMsgTool( uint8_t toolidx);
+void mctrl_limitStatus( uint8_t limits);
 
 #endif
