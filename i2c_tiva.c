@@ -50,6 +50,7 @@ void TWI_init(void) {
 
     //enable I2C module 0
     SysCtlPeripheralEnable( TIVA_I2C_PERI);
+    SysCtlPeripheralEnable( SYSCTL_PERIPH_TIMER1);
     //enable GPIO peripheral that contains I2C0
     SysCtlPeripheralEnable( TIVA_I2C_PINPERI);
     SysCtlDelay( 3);
@@ -88,6 +89,15 @@ void TWI_init(void) {
 	IntPrioritySet( INT_I2C0, IRQPRIO_I2C);
 
     IntEnable( INT_I2C0);
+
+    TimerConfigure( TIMER1_BASE, TIMER_CFG_PERIODIC);
+    TimerLoadSet( TIMER1_BASE, TIMER_A, TIMER_GET_DELAY_HZ( 1000));
+	TimerEnable( TIMER1_BASE, TIMER_A);
+
+    TimerIntRegister( TIMER1_BASE, TIMER_TIMA_TIMEOUT, TWI_isrTick);
+	IntPrioritySet( INT_TIMER1A, IRQPRIO_LED);
+	TimerIntClear( TIMER1_BASE, TimerIntStatus( TIMER1_BASE, true));
+    TimerIntEnable( TIMER1_BASE, TIMER_TIMA_TIMEOUT);
 }
 
 // copy a transaction into the buffer
@@ -148,10 +158,8 @@ bool TWI_free( uint8_t *buffer, uint32_t len) {
 	return true;
 }
 
-bool TWI_tick() {
+void TWI_isrTick() {
 	TWI_triggerSend();
-
-	return true;
 }
 
 bool TWI_isBusy() {

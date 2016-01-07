@@ -78,7 +78,7 @@ typedef struct {
 //---------------------------------------------------------------------------------
 
 void TWI_init();
-bool TWI_tick();
+void TWI_isrTick();
 
 t_i2cTransfer* TWI_putQueue( t_i2cTransfer* op);
 t_i2cTransfer* TWI_fetchQueue();

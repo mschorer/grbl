@@ -71,7 +71,6 @@ ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
 	TIMER_INT_CLEAR( TIMER_LED_PORT);
 
 	system_tick();
-	TWI_tick();
 	
 	status_ticks--;
 	if ( status_ticks == 0) {
