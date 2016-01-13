@@ -11,7 +11,6 @@
 #include "config.h"
 
 #ifdef CPU_MAP_TIVA
-	#define TARGET_IS_TM4C123_RB1
 
 	#include <inc/tm4c123gh6pm.h>
 

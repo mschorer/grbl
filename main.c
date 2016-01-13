@@ -22,9 +22,7 @@
   terms of the MIT-license. See COPYING for more details.  
     Copyright (c) 2009-2011 Simen Svale Skogsrud
     Copyright (c) 2011-2012 Sungeun K. Jeon
-*/  
-
-#define TARGET_IS_TM4C123_RB1
+*/
 
 #include <stdint.h>
 #include <stdbool.h>
