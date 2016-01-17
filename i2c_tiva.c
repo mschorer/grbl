@@ -52,11 +52,12 @@ void TWI_init(void) {
     SysCtlPeripheralEnable( TIVA_I2C_PERI);
     SysCtlPeripheralEnable( SYSCTL_PERIPH_TIMER1);
     //enable GPIO peripheral that contains I2C0
+    SysCtlGPIOAHBEnable( TIVA_I2C_PINPERI);
     SysCtlPeripheralEnable( TIVA_I2C_PINPERI);
     SysCtlDelay( 3);
 
     //reset module
-    SysCtlPeripheralReset( TIVA_I2C_PERI);
+//    SysCtlPeripheralReset( TIVA_I2C_PERI);
 
     // Select the I2C function for these pins.
     GPIOPinTypeI2CSCL( TIVA_I2C_PINPORT, GPIO_PIN_2);
@@ -159,6 +160,9 @@ bool TWI_free( uint8_t *buffer, uint32_t len) {
 }
 
 void TWI_isrTick() {
+
+	TimerIntClear( TIMER1_BASE, TimerIntStatus( TIMER1_BASE, true));
+
 	TWI_triggerSend();
 }
 

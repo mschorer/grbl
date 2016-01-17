@@ -199,8 +199,8 @@
 	#define C_STEP_BIT				7  // Uno Digital Pin 4
 	#define STEP_MASK   		    ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)|(1<<A_STEP_BIT)|(1<<B_STEP_BIT)|(1<<C_STEP_BIT)) // All step bits
 
-	#define STEP_TIMER_PERI			SYSCTL_PERIPH_WTIMER1
-	#define TIMER_STEP_PORT			WTIMER1_BASE
+	#define STEP_TIMER_PERI			SYSCTL_PERIPH_WTIMER0
+	#define TIMER_STEP_PORT			WTIMER0_BASE
 	#define TIMER_STEP_PERIOD		TIMER_A
 	#define TIMER_STEP_PULSE		TIMER_B
 
@@ -315,15 +315,15 @@
 	#define QEI_MASK		((1<<6)|(1<<7))
 
 	// priorities for interrupts
-	#define IRQPRIO_MOTION		0
-	#define IRQPRIO_MPULSE		0
-	#define IRQPRIO_LIMIT		1
-	#define IRQPRIO_FAULT		1
-	#define IRQPRIO_SERIAL		2
-	#define IRQPRIO_I2C			2
-	#define IRQPRIO_SSI			3
-	#define IRQPRIO_QEI			4
-	#define IRQPRIO_LED			5
+	#define IRQPRIO_MOTION		(0 << 5)
+	#define IRQPRIO_MPULSE		(0 << 5)
+	#define IRQPRIO_LIMIT		(1 << 5)
+	#define IRQPRIO_FAULT		(1 << 5)
+	#define IRQPRIO_SERIAL		(2 << 5)
+	#define IRQPRIO_I2C			(2 << 5)
+	#define IRQPRIO_SSI			(3 << 5)
+	#define IRQPRIO_QEI			(4 << 5)
+	#define IRQPRIO_LED			(5 << 5)
 
 #endif
 

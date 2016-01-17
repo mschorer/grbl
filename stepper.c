@@ -549,8 +549,8 @@ void stepper_init()
 	TimerConfigure( TIMER_STEP_PORT, TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC | TIMER_CFG_B_ONE_SHOT);
 	TimerIntEnable( TIMER_STEP_PORT, TIMER_TIMA_TIMEOUT | TIMER_TIMB_TIMEOUT);
 
-	IntPrioritySet( INT_WTIMER1A, IRQPRIO_MOTION);
-	IntPrioritySet( INT_WTIMER1B, IRQPRIO_MPULSE);
+	IntPrioritySet( INT_WTIMER0A, IRQPRIO_MOTION);
+	IntPrioritySet( INT_WTIMER0B, IRQPRIO_MPULSE);
 
 #else
   // Configure step and direction interface pins
