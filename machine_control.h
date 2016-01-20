@@ -42,6 +42,10 @@
 
 #define CMD_MESSAGE	0x70
 
+#define CMD_MSG_TXT	0x00
+#define CMD_MSG_LIM	0x01
+#define CMD_MSG_FLT	0x02
+
 #define CMD_SPINDLE_OFF 0x80
 #define CMD_SPINDLE_HI 0x8000
 

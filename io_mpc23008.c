@@ -134,20 +134,17 @@ void io_read_complete( uint8_t* data, uint32_t len) {
 }
 
 void io_faultStatus( uint8_t error_bits) {
-	char msg[16];
-	char axes[6] = "XYZABC";
+	char msg[2];
+	// "XYZUVW";
 	uint8_t i, mask = 0x01;
 
-	sprintf( msg, "%cFAULT ", CMD_MESSAGE);
+	msg[0] = CMD_MESSAGE | CMD_MSG_FLT;
+	msg[1] = error_bits & 0x3f;
 
-	for( i = 0; i < 6; i++) {
-		msg[ 7+i] = (error_bits & mask) ? '-' : axes[i];
-		mask <<= 1;
-	}
-	msg[ 7+i] = '\0';
-
-	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, 14, 0);
+	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, 2, 0);
 }
+
+
 
 // interrupt handler for the "FAULT" interrupt
 void io_isrFault() {

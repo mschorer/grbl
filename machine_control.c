@@ -54,20 +54,20 @@ void mctrl_u16Cmd( uint16_t b) {
 }
 
 void mctrl_limitStatus( uint8_t limits) {
-	char msg[16];
-	char axes[6] = "XYZABC";
-	uint8_t i, mask = 0x01;
+	char msg[2];
+	// "XYZUVW";
+	uint8_t i, mask = 0x01, bit = 0x01;
 
-	sprintf( msg, "%cLIMIT ", CMD_MESSAGE);
+	msg[0] = CMD_MESSAGE | CMD_MSG_LIM;
+	msg[1] = 0;
 
 	for( i = 0; i < 6; i++) {
-		msg[ 7+i] = (limits & mask) ? '-' : axes[i];
+		if (limits & mask) msg[1] |= bit;
 		if ( i == 1) mask <<= 3;
 		else mask <<= 1;
 	}
-	msg[ 7+i] = '\0';
 
-	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, 14, 0);
+	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, 2, 0);
 }
 
 void mctrl_msgCmd( uint8_t tidx) {
