@@ -48,7 +48,7 @@ void status_init()
 	TIMER_ISR_SET( TIMER_LED_PORT, TIMER_LED_VECT, isrLedTimer);
 
 	TIMER_DISABLE( TIMER_LED_PORT, TIMER_A);
-	TIMER_SETUP( TIMER_LED_PORT, TIMER_A, TIMER_TIMA_TIMEOUT, TIMER_GET_DELAY_HZ( 62));
+	TIMER_SETUP( TIMER_LED_PORT, TIMER_A, TIMER_TIMA_TIMEOUT, TIMER_GET_DELAY_HZ( 60));
 	IntPrioritySet( INT_TIMER0A, IRQPRIO_LED);
 	TIMER_ENABLE( TIMER_LED_PORT, TIMER_A);
 /*
@@ -79,33 +79,33 @@ ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
 			switch (sys.state) {
 				case STATE_IDLE:	status_ticks = 1; break;
 
-				case STATE_QUEUED:	status_ticks = 22; break;
-				case STATE_HOLD:	status_ticks = 42; break;
+				case STATE_QUEUED:	status_ticks = 20; break;
+				case STATE_HOLD:	status_ticks = 40; break;
 
-				case STATE_CYCLE:	status_ticks = 62; break;
+				case STATE_CYCLE:	status_ticks = 60; break;
 
-				case STATE_HOMING:	status_ticks = 24; break;
-				case STATE_ALARM:	status_ticks = 8; break;
-				case STATE_CHECK_MODE:	status_ticks = 124; break;
+				case STATE_HOMING:	status_ticks = 20; break;
+				case STATE_ALARM:	status_ticks = 10; break;
+				case STATE_CHECK_MODE:	status_ticks = 120; break;
 
-				default: status_ticks = 248;
+				default: status_ticks = 235;
 			}
 
 			GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_RED, 1<<STATUS_LED_RED);	//STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
 		} else {
 			switch (sys.state) {
-				case STATE_IDLE:	status_ticks = 61; break;
+				case STATE_IDLE:	status_ticks = 59; break;
 
 				case STATE_QUEUED:	status_ticks = 40; break;
 				case STATE_HOLD:	status_ticks = 20; break;
 
-				case STATE_CYCLE:	status_ticks = 62; break;
+				case STATE_CYCLE:	status_ticks = 60; break;
 
-				case STATE_HOMING:	status_ticks = 90; break;
-				case STATE_ALARM:	status_ticks = 8; break;
+				case STATE_HOMING:	status_ticks = 100; break;
+				case STATE_ALARM:	status_ticks = 10; break;
 
 				case STATE_CHECK_MODE:	status_ticks = 120; break;
-				default: status_ticks = 2;
+				default: status_ticks = 5;
 			}
 			// toggle bit
 			GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_RED, 0);	//STATUS_LED_IN |= 1<<STATUS_LED_BIT;
