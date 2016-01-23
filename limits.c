@@ -60,7 +60,7 @@ void limits_init()
 
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
 	  GPIO_ISR_SET( LIMIT_PORT, LIMIT_INT_vect, isrLimits);
-	  GPIO_INT_FALLING( LIMIT_PORT, LIMIT_MASK);
+	  GPIO_INT_BOTH( LIMIT_PORT, LIMIT_MASK);
 
 	  IntPrioritySet( INT_GPIOB, IRQPRIO_LIMIT);
 
@@ -107,7 +107,11 @@ void limits_disable()
   {
 	  GPIO_INT_CLEAR( LIMIT_PORT);
 
-	  mctrl_limitStatus( GPIO_READ_MASKED( LIMIT_PORT, LIMIT_MASK));
+	  uint8_t limitStatus = GPIO_READ_MASKED( LIMIT_PORT, LIMIT_MASK);
+
+	  mctrl_limitStatus( limitStatus);
+
+	  if ( limitStatus == LIMIT_MASK) return;
 
     // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
     // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
