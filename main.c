@@ -87,10 +87,10 @@ int main(void)
 {
 	// Initialize system upon power-up.
 
-	FPULazyStackingEnable();
-	FPUEnable();
+	MAP_FPULazyStackingEnable();
+	MAP_FPUEnable();
 
-	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+	MAP_SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
 	status_init();
 

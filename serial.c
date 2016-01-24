@@ -143,9 +143,9 @@ void handleTransmit() {
 	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 0);
 }
 
-void handleReceive() {
+void handleReceive( uint32_t status) {
 	int32_t data;
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN,  1<<STATUS_LED_GREEN);
+	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 1<<STATUS_LED_GREEN);
 
 	while( UARTCharsAvail(TIVA_SERIAL_UART)) {
 		g_ui32UARTTxCount++;
@@ -157,6 +157,9 @@ void handleReceive() {
 		// Pick off runtime command characters directly from the serial stream. These characters are
 		// not passed into the buffer, but these set system state flag bits for runtime execution.
 		switch ( data) {
+
+		// fifo empty
+		case -1: break;
 
 		case CMD_STATUS_REPORT: bit_true_atomic(sys.execute, EXEC_STATUS_REPORT); break; // Set as true
 		case CMD_CYCLE_START:   bit_true_atomic(sys.execute, EXEC_CYCLE_START); break; // Set as true
@@ -204,7 +207,7 @@ void isrUart(void)
 		return;
 	}
 
-	if ( ui32Status & ( UART_INT_RT | UART_INT_RX)) handleReceive();
+	if ( ui32Status & ( UART_INT_RT | UART_INT_RX)) handleReceive( ui32Status);
 	if ( ui32Status & UART_INT_TX) handleTransmit();
 }
 
@@ -243,7 +246,7 @@ void serial_init() {
 
     IntEnable(INT_UART0);
 }
-
+/*
 uint32_t serial_strLength( char *data) {
 	uint32_t len = 0;
 
@@ -257,15 +260,15 @@ uint32_t serial_strLength( char *data) {
 bool serial_sendString( char *data) {
 	return serial_sendData( data, serial_strLength( data));
 }
-
-bool serial_sendData( char *data, uint32_t size) {
+*/
+bool serial_sendString( char *data) {
 	uint32_t idx = 0;
-	bool jumpStart;
+//	bool jumpStart = (serial_tx_buffer_head == serial_tx_buffer_tail);
 
 //	UARTIntEnable(TIVA_SERIAL_UART, UART_INT_TX);
 
 	uint8_t next_head = serial_tx_buffer_head;
-	while( idx < size) {
+	while( data[ idx] != 0) {
 //		serial_write( data[ idx++]);
 
 		next_head++;
@@ -273,20 +276,22 @@ bool serial_sendData( char *data, uint32_t size) {
 
 		// Wait until there is space in the buffer
 		while (next_head == serial_tx_buffer_tail) {
+			handleTransmit();
+
 			// TODO: Restructure st_prep_buffer() calls to be executed here during a long print.
 			if (sys.execute & EXEC_RESET) { return false; } // Only check for abort to avoid an endless loop.
 		}
 
 		// Store data and advance head
 		serial_tx_buffer[ serial_tx_buffer_head] = data[ idx++];
-		jumpStart = (serial_tx_buffer_head == serial_tx_buffer_tail);
-		serial_tx_buffer_head = next_head;
 
-		// if not transmitting, push out first char
-		if ( jumpStart) {
-			handleTransmit();
-		}
+		serial_tx_buffer_head = next_head;
 	}
+
+	// if uart is idle, push out first char
+//	if ( jumpStart) {
+		handleTransmit();
+//	}
 
 	return false;
 }

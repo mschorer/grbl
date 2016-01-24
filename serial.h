@@ -32,7 +32,7 @@
   #define RX_BUFFER_SIZE 128
 #endif
 #ifndef TX_BUFFER_SIZE
-  #define TX_BUFFER_SIZE 64
+  #define TX_BUFFER_SIZE 128
 #endif
 
 #define SERIAL_NO_DATA 0xff
@@ -50,13 +50,13 @@
 
 void serial_init();
 
-uint32_t serial_strLength( char *data);
+//uint32_t serial_strLength( char *data);
 bool serial_sendString( char *data);
-bool serial_sendData( char *data, uint32_t size);
+//bool serial_sendData( char *data, uint32_t size);
 
 
 // Writes one byte to the TX serial buffer. Called by main program.
-void serial_write(uint8_t data);
+// void serial_write(uint8_t data);
 
 // Fetches the first byte in the serial read buffer. Called by main program.
 uint8_t serial_read();

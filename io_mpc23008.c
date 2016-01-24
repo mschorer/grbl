@@ -65,7 +65,7 @@ void io_init() {
     TWI_putOp( MCP_ADDR, I2C_WRITE, mcp_setup, 12, 0);
 	io_triggerReadInputs();
 
-	TWI_triggerSend();
+//	TWI_triggerSend();
 
     GPIOIntRegister( I2CINT_PORT, io_isrFault);
 	GPIOIntClear( I2CINT_PORT, I2CINT_MASK);
@@ -109,7 +109,7 @@ void io_triggerReadInputs() {
 	io_setIndex( MCP_REG_GPIO);
 	TWI_putOp( MCP_ADDR, I2C_READ, mcp_buf, 1, io_read_complete);
 
-	TWI_triggerSend();
+//	TWI_triggerSend();
 }
 
 // this is called after the FAULT bits have been read from the io expander
@@ -136,7 +136,6 @@ void io_read_complete( uint8_t* data, uint32_t len) {
 void io_faultStatus( uint8_t error_bits) {
 	char msg[2];
 	// "XYZUVW";
-	uint8_t i, mask = 0x01;
 
 	msg[0] = CMD_MESSAGE | CMD_MSG_FLT;
 	msg[1] = error_bits & 0x3f;
