@@ -74,7 +74,8 @@ void mctrl_limitStatus( uint8_t limits) {
 void mctrl_msgCmd( uint8_t tidx) {
 	char msg[64];
 	
-	sprintf( msg, "%cT%i R[%5.2f]  Z[%6.2f]" /*\nX[%8.2f]  Y[%8.2f]  Z[%8.2f]"*/, CMD_MESSAGE, tidx, gc_state.tool_table[tidx].r, gc_state.tool_table[tidx].xyz[2]/*gc_state.tool_table[tidx].xyz[0], gc_state.tool_table[tidx].xyz[1], gc_state.tool_table[tidx].xyz[2]*/);
+//	sprintf( msg, "%cT%i R[%5.2f]  Z[%6.2f]" , CMD_MESSAGE, tidx, gc_state.tool_table[tidx].r, gc_state.tool_table[tidx].xyz[2]);
+	sprintf( msg, "%cR[%5.1f] T%i\nX[%5.1f] Y[%5.1f] Z[%5.1f]", CMD_MESSAGE, tidx, gc_state.tool_table[tidx].r, gc_state.tool_table[tidx].xyz[0], gc_state.tool_table[tidx].xyz[1], gc_state.tool_table[tidx].xyz[2]);
 	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, strlen( msg), 0);
 //	TWI_triggerSend();
 }

@@ -49,7 +49,7 @@
 	#define GLOBAL_INT_VECTOR(fname)		void fname()
 	#define ISR_ROUTINE(vect,isr)			void isr()
 
-	#define GPIO_OUTPUT_SET(port,mask)		ROM_GPIOPinTypeGPIOOutput( port, mask)
+	#define GPIO_OUTPUT_SET(port,mask)		MAP_GPIOPinTypeGPIOOutput( port, mask)
 	#define GPIO_OUTPUT_STD(port,mask)		MAP_GPIOPadConfigSet( port, mask, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD);
 
 	#define GPIO_WRITE_MASKED(port,mask,v)	GPIOPinWrite( port, mask, v)
