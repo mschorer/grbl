@@ -314,7 +314,7 @@ ISR_ROUTINE( TIMER_STEP_VECTA, isrStep)
 // SPINDLE_ENABLE_PORT ^= 1<<SPINDLE_ENABLE_BIT; // Debug: Used to time ISR
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN,  1<<STATUS_LED_GREEN);
+//	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN,  1<<STATUS_LED_GREEN);
 
   // Set the direction pins a couple of nanoseconds before we step the steppers
 //  DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
@@ -458,7 +458,7 @@ ISR_ROUTINE( TIMER_STEP_VECTA, isrStep)
 ISR_ROUTINE(TIMER_STEP_VECTB, isrReset)
 {
 	TIMER_INT_CLEAR( TIMER_STEP_PORT);
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
+//	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
 
   // Reset stepping pins (leave the direction pins)
 //  STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);

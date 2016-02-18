@@ -105,7 +105,7 @@ void handleTransmit() {
 	int32_t ui32rc;
 	uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
 
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 1<<STATUS_LED_BLUE);
+//	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 1<<STATUS_LED_BLUE);
 
 	while( UARTSpaceAvail( TIVA_SERIAL_UART)) {
 
@@ -140,12 +140,12 @@ void handleTransmit() {
 
 	serial_tx_buffer_tail = tail;
 
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 0);
+//	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_BLUE, 0);
 }
 
 void handleReceive( uint32_t status) {
 	int32_t data;
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 1<<STATUS_LED_GREEN);
+//	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 1<<STATUS_LED_GREEN);
 
 	while( UARTCharsAvail(TIVA_SERIAL_UART)) {
 		g_ui32UARTTxCount++;
@@ -187,7 +187,7 @@ void handleReceive( uint32_t status) {
 		}
 	}
 
-	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
+//	GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_GREEN, 0);
 }
 
 
