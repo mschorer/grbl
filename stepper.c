@@ -333,7 +333,7 @@ ISR_ROUTINE( TIMER_STEP_VECTA, isrStep)
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   //TCNT0 = st.step_pulse_time; // Reload Timer0 counter
   //TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
-  TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_PULSE, st.step_pulse_time);
+  TIMER_SET_DELAY( TIMER_STEP_PORT, TIMER_STEP_PULSE, st.step_pulse_time * 80);
   TIMER_ENABLE( TIMER_STEP_PORT, TIMER_STEP_PULSE);
 
   busy = true;

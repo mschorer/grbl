@@ -85,6 +85,7 @@ void mctrl_queueMsgString( const char *str);
 */
 void mctrl_msgCmd( uint8_t toolidx);
 
+uint8_t mctrl_limitNorm( uint8_t limits);
 void mctrl_limitStatus( uint8_t limits);
 
 #endif

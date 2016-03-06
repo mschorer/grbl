@@ -218,7 +218,7 @@ ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
 			}
 			status_state = true;
 
-			statusRGBIntensitySet( 0.1);
+			statusRGBIntensitySet( 0.6);
 //			GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_RED, 1<<STATUS_LED_RED);	//STATUS_LED_PORT |= 1<<STATUS_LED_BIT;
 		} else {
 			switch (sys.state) {
@@ -238,7 +238,7 @@ ISR_ROUTINE(TIMER_LED_VECT,isrLedTimer) {
 
 			status_state = false;
 			// toggle bit
-			statusRGBIntensitySet( 0.6);
+			statusRGBIntensitySet( 0.0);
 //			GPIO_WRITE_MASKED( STATUS_LED_PORT, 1<<STATUS_LED_RED, 0);	//STATUS_LED_IN |= 1<<STATUS_LED_BIT;
 		}
 	}

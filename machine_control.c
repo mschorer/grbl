@@ -53,20 +53,25 @@ void mctrl_u16Cmd( uint16_t b) {
 //	TWI_triggerSend();
 }
 
-void mctrl_limitStatus( uint8_t limits) {
-	char msg[2];
+uint8_t mctrl_limitNorm( uint8_t limits) {
+	uint8_t i, msg = 0x00, mask = 0x01, bit = 0x01;
+
 	// "XYZUVW";
-	uint8_t i, mask = 0x01, bit = 0x01;
-
-	msg[0] = CMD_MESSAGE | CMD_MSG_LIM;
-	msg[1] = 0;
-
 	for( i = 0; i < 6; i++) {
-		if (limits & mask) msg[1] |= bit;
+		if (limits & mask) msg |= bit;
 		if ( i == 1) mask <<= 3;
 		else mask <<= 1;
 		bit <<= 1;
 	}
+
+	return msg;
+}
+
+void mctrl_limitStatus( uint8_t limits) {
+	char msg[2];
+
+	msg[0] = CMD_MESSAGE | CMD_MSG_LIM;
+	msg[1] = mctrl_limitNorm( limits);
 
 	TWI_putOp( MCTRL_I2C_ADDR, I2C_WRITE, (uint8_t*) msg, 2, 0);
 }
