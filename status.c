@@ -65,7 +65,7 @@ ISR(TIMER2_OVF_vect) {
 
 				case STATE_CYCLE:	status_ticks = 62; break;
 
-				case STATE_HOMING:	status_ticks = 24; break;
+				case STATE_HOMING:	status_ticks = 8; break;
 				case STATE_ALARM:	status_ticks = 8; break;
 				case STATE_CHECK_MODE:	status_ticks = 124; break;
 
@@ -82,7 +82,7 @@ ISR(TIMER2_OVF_vect) {
 
 				case STATE_CYCLE:	status_ticks = 62; break;
 
-				case STATE_HOMING:	status_ticks = 90; break;
+				case STATE_HOMING:	status_ticks = 24; break;
 				case STATE_ALARM:	status_ticks = 8; break;
 
 				case STATE_CHECK_MODE:	status_ticks = 120; break;

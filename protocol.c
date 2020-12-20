@@ -227,48 +227,43 @@ void protocol_execute_runtime()
       report_realtime_status();
       bit_false_atomic(sys.execute,EXEC_STATUS_REPORT);
     }
-/*    
-    // trigger homing
-    if (( rt_exec & ( EXEC_FEED_HOLD | EXEC_CYCLE_START)) == ( EXEC_FEED_HOLD | EXEC_CYCLE_START)) {
-	    if (sys.state == STATE_ALARM) {
-		    if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) {
-			    // Only perform homing if Grbl is idle or lost.
-			    mc_homing_cycle();
-			    if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
-			    sys.auto_start = false; // Disable planner auto start upon feed hold.
-			}
-	    }
-	    bit_false_atomic(sys.execute,EXEC_FEED_HOLD);
-	    bit_false_atomic(sys.execute,EXEC_CYCLE_START);
-		rt_exec &= ~( EXEC_FEED_HOLD | EXEC_CYCLE_START);
-    }
-*/
+    
     // Execute a feed hold with deceleration, only during cycle.
     if (rt_exec & EXEC_FEED_HOLD) {
       // !!! During a cycle, the segment buffer has just been reloaded and full. So the math involved
       // with the feed hold should be fine for most, if not all, operational scenarios.
-      if (sys.state == STATE_CYCLE) {
-        sys.state = STATE_HOLD;
-        st_update_plan_block_parameters();
-        st_prep_buffer();
-        sys.auto_start = false; // Disable planner auto start upon feed hold.
+		switch( sys.state) {
+			case STATE_CYCLE:
+				sys.state = STATE_HOLD;
+				st_update_plan_block_parameters();
+				st_prep_buffer();
+				sys.auto_start = false; // Disable planner auto start upon feed hold.
+			break;
+			case STATE_ALARM:
+			if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) {
+				// Only perform homing if Grbl is idle or lost.
+				mc_homing_cycle();
+				if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
+				sys.auto_start = false; // Disable planner auto start upon feed hold.
+			}
+			break;
       }
       bit_false_atomic(sys.execute,EXEC_FEED_HOLD);
     }
         
     // Execute a cycle start by starting the stepper interrupt begin executing the blocks in queue.
     if (rt_exec & EXEC_CYCLE_START) { 
-      if (sys.state == STATE_QUEUED) {
-        sys.state = STATE_CYCLE;
-        st_prep_buffer(); // Initialize step segment buffer before beginning cycle.
-        st_wake_up();
-        if (bit_istrue(settings.flags,BITFLAG_AUTO_START)) {
-          sys.auto_start = true; // Re-enable auto start after feed hold.
-        } else {
-          sys.auto_start = false; // Reset auto start per settings.
-        }
-      }    
-      bit_false_atomic(sys.execute,EXEC_CYCLE_START);
+		if( sys.state == STATE_QUEUED) {
+			sys.state = STATE_CYCLE;
+			st_prep_buffer(); // Initialize step segment buffer before beginning cycle.
+			st_wake_up();
+			if (bit_istrue(settings.flags,BITFLAG_AUTO_START)) {
+				sys.auto_start = true; // Re-enable auto start after feed hold.
+			} else {
+				sys.auto_start = false; // Reset auto start per settings.
+			}
+		}    
+		bit_false_atomic(sys.execute,EXEC_CYCLE_START);
     }
     
     // Reinitializes the cycle plan and stepper system after a feed hold for a resume. Called by 

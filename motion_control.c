@@ -252,6 +252,8 @@ void mc_homing_cycle()
   }
  
   sys.state = STATE_HOMING; // Set system state variable
+  report_realtime_status();
+		
   limits_disable(); // Disable hard limits pin change register for cycle duration
     
   // -------------------------------------------------------------------------------------

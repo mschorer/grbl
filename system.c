@@ -41,13 +41,16 @@ void system_init()
 // directly from the incoming serial data stream.
 ISR(PINOUT_INT_vect) 
 {
+	uint8_t pin = (PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK;
   // Enter only if any pinout pin is actively low.
-  if ((PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) { 
-    if (bit_isfalse(PINOUT_PIN,bit(PIN_RESET))) {
+  if ( pin) { 
+    if ( pin & (1<< PIN_RESET)) {	//bit_isfalse(PINOUT_PIN,bit(PIN_RESET))) {
       mc_reset();
     } else {
-		if (bit_isfalse(PINOUT_PIN,bit(PIN_FEED_HOLD))) bit_true_atomic(sys.execute, EXEC_FEED_HOLD);
-		if (bit_isfalse(PINOUT_PIN,bit(PIN_CYCLE_START))) bit_true_atomic(sys.execute, EXEC_CYCLE_START);
+		uint8_t exec_bits = sys.execute;
+		if ( pin & (1<< PIN_FEED_HOLD)) exec_bits |= EXEC_FEED_HOLD;
+		if ( pin & (1<< PIN_CYCLE_START)) exec_bits |= EXEC_CYCLE_START;
+		bit_true_atomic(sys.execute, exec_bits);
     } 
   }
 }
